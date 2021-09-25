@@ -1,7 +1,7 @@
 # myRenaultLC
  Standalone browser page to access Renault vehicles data
  
-Available here: http://win98.altervista.org/myrenault-pub.html
+Available here: http://jumpjackaltervista.org/myrenault
  
 
 Fill in your MyRenault credentials (email and password) and your vehicle VIN (visible in the official APP), then select the endpoint from the list, and click SEND QUERY button.
