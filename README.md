@@ -22,11 +22,15 @@ Alternatives
 -------------
 
  - Python APIs (you will need to install Python and operate by command line):
-  - https://github.com/hacf-fr/renault-api  
-	- https://github.com/jamesremuscat/pyze (from the author of the initial blog post about Renault APIs: https://muscatoxblog.blogspot.com/2019/07/delving-into-renaults-new-api.html)
+    - https://github.com/hacf-fr/renault-api  
+    - https://github.com/jamesremuscat/pyze (from the author of the initial blog post about Renault APIs: https://muscatoxblog.blogspot.com/2019/07/delving-into-renaults-new-api.html)
 
  - PHP pages (require PHP server):
-  -https://github.com/db-EV/ZoePHP
+   - https://github.com/db-EV/ZoePHP
+
+
+ - ioBroker-Adapter: https://github.com/fungus75/ioBroker.zoe2  (ioBroker: https://www.iobroker.net/)
+ - iOS widget (javascript): https://gist.github.com/mountbatt/772e4512089802a2aa2622058dd1ded7
 
 
  - Search for myrenault <a href="https://github.com/search?q=myrenault">in all github</a>
