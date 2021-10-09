@@ -47,7 +47,7 @@ $weather_api_key = '';
 //Österreich: AT
 //Sverige: SE
 //United Kingdom: GB
-$country = 'IT';
+$country = 'EN';
 
 //ABRP Generic Token
 //More information: https://abetterrouteplanner.com/
