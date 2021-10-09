@@ -1,38 +1,16 @@
 <?php
-$debuglog  = $_GET['debug'];
-
-//echo "DEBUG=" . $debuglog . "<br>";
-
-if (!isset($_GET['pass'])) {
-    die("Not authorized");
-} else {
-	if ($_GET['pass'] != "miapasssegretissima") {
-		die("Not authorized");
-	}
-
-  $username  = $_GET['username'];
-  $password  = $_GET['password'];
-  //$vin  = $_GET['vin'];
-
-}
-
-
-
-function logme($text) {
-//echo "DEBUG='" . $debuglog . "'<br>";
-//	if ($debuglog == "1") {
-		echo $text;
-//	}
-}
-
+//$showResponse=true;
+ echo '<HTML>'."\n".'<HEAD>'."\n".'<LINK REL="manifest" HREF="zoephp.webmanifest">'."\n".'<LINK REL="stylesheet" HREF="stylesheet.css">'."\n".'<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0">'."\n".'<TITLE>'.$zoename.'</TITLE>'."\n".'</HEAD>'."\n".'<BODY>'."\n";
 session_cache_limiter('nocache');
 require 'api-keys.php';
 require 'config.php';
 require "tests-LC.php";
+require "security.php";
 if (file_exists('lng/'.$country.'.php')) require 'lng/'.$country.'.php';
 else require 'lng/EN.php';
 if (empty(${$country})) $gigya_api = $GB;
 else $gigya_api = ${$country};
+
 
 //Evaluate parameters
 if (isset($_GET['cron']) || (isset($argv[1]) && $argv[1] == 'cron')) {
@@ -129,7 +107,22 @@ if (empty($session[1]) || $session[0] !== $date_today) {
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
   $response = curl_exec($ch);
-  if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
+
   $responseData = json_decode($response, TRUE);
   $personId = $responseData['data']['personId'];
   $oauth_token = $responseData['sessionInfo']['cookieValue'];
@@ -146,7 +139,23 @@ if (empty($session[1]) || $session[0] !== $date_today) {
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
   $response = curl_exec($ch);
-  if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 002: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
+
+
   $responseData = json_decode($response, TRUE);
   $session[1] = $responseData['id_token'];
   $session[0] = $date_today;
@@ -163,7 +172,21 @@ if (empty($session[2])) {
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
   curl_setopt($ch, CURLOPT_HTTPHEADER, $postData);
   $response = curl_exec($ch);
-  if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 003: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
   $responseData = json_decode($response, TRUE);
   $session[2] = $responseData['accounts'][0]['accountId'];
 }
@@ -182,7 +205,21 @@ if ($cmd_acnow === TRUE) {
   curl_setopt($ch, CURLOPT_HTTPHEADER, $postData);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
   $response = curl_exec($ch);
-  if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
 }
 
 //Evaluate parameter "chargenow" for instant charging
@@ -199,7 +236,21 @@ if ($cmd_chargenow === TRUE) {
   curl_setopt($ch, CURLOPT_HTTPHEADER, $postData);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
   $response = curl_exec($ch);
-  if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
 }
 
 //Evaluate parameters "cmon" respectively "cmoff" for setting the chargemode
@@ -217,7 +268,22 @@ if ($cmd_cmon === TRUE || $cmd_cmoff === TRUE) {
   curl_setopt($ch, CURLOPT_HTTPHEADER, $postData);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
   $response = curl_exec($ch);
-  if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
+
 }
 
 //Request battery and charging status from Renault
@@ -226,11 +292,27 @@ if ($update_ok === TRUE) {
     'apikey: '.$kamereon_api,
     'x-gigya-id_token: '.$session[1]
   );
-  $ch = curl_init('https://api-wired-prod-1-euw1.wrd-aws.com/commerce/v1/accounts/'.$session[2].'/kamereon/kca/car-adapter/v2/cars/'.$vin.'/battery-status?country='.$country);
+	$queryUrl = 'https://api-wired-prod-1-euw1.wrd-aws.com/commerce/v1/accounts/'.$session[2].'/kamereon/kca/car-adapter/v2/cars/'.$vin.'/battery-status?country='.$country;
+  $ch = curl_init($queryUrl);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
   curl_setopt($ch, CURLOPT_HTTPHEADER, $postData);
   $response = curl_exec($ch);
-  if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
+
   $md5 = md5($response);
   $responseData = json_decode($response, TRUE);
   $s = date_create_from_format(DATE_ISO8601, $responseData['data']['attributes']['timestamp'], timezone_open('UTC'));
@@ -266,7 +348,21 @@ if (isset($md5) && $md5 != $session[3] && $update_sucess === TRUE) {
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
   curl_setopt($ch, CURLOPT_HTTPHEADER, $postData);
   $response = curl_exec($ch);
-  if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
   $responseData = json_decode($response, TRUE);
   $s = $responseData['data']['attributes']['totalMileage'];
   if (empty($s)) $update_sucess = FALSE;
@@ -281,7 +377,22 @@ if (isset($md5) && $md5 != $session[3] && $update_sucess === TRUE) {
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
   curl_setopt($ch, CURLOPT_HTTPHEADER, $postData);
   $response = curl_exec($ch);
-  if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
+
   $responseData = json_decode($response, TRUE);
   $s = $responseData['data']['attributes']['chargeMode'];
   if (empty($s)) $session[24] = 'n/a';
@@ -297,7 +408,22 @@ if (isset($md5) && $md5 != $session[3] && $update_sucess === TRUE) {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $postData);
     $response = curl_exec($ch);
-    if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
+
     $responseData = json_decode($response, TRUE);
     $s = $responseData['data']['attributes']['externalTemperature'];
     if (empty($s) && $s != '0.0') $update_sucess = FALSE;
@@ -314,7 +440,21 @@ if (isset($md5) && $md5 != $session[3] && $update_sucess === TRUE) {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $postData);
     $response = curl_exec($ch);
-    if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
     $responseData = json_decode($response, TRUE);
     $s = date_create_from_format(DATE_ISO8601, $responseData['data']['attributes']['lastUpdateTime'], timezone_open('UTC'));
 	if (empty($s)) $update_sucess = FALSE;
@@ -332,7 +472,22 @@ if (isset($md5) && $md5 != $session[3] && $update_sucess === TRUE) {
 	$ch = curl_init('https://api.openweathermap.org/data/2.5/onecall/timemachine?lat='.$session[17].'&lon='.$session[18].'&dt='.$weather_api_dt.'&units=metric&lang='.$weather_api_lng.'&appid='.$weather_api_key);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 	$response = curl_exec($ch);
-	if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
+
 	$responseData = json_decode($response, TRUE);
 	$session[22] = $responseData['current']['temp'];
 	$session[23] = $responseData['current']['weather']['0']['description'];
@@ -358,7 +513,21 @@ if (isset($md5) && $md5 != $session[3] && $update_sucess === TRUE) {
 	    curl_setopt($ch, CURLOPT_HTTPHEADER, $postData);
 	    curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
 	    $response = curl_exec($ch);
-	    if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
 	  }
       if (!empty($exec_bl)) shell_exec($exec_bl.' "'.$sendmessage.'"');
 	  $session[5] = 'Y';
@@ -384,7 +553,22 @@ if (isset($md5) && $md5 != $session[3] && $update_sucess === TRUE) {
     $ch = curl_init('https://api.iternio.com/1/tlm/send?api_key=fd99255b-91a0-45cd-9df5-d6baa8e50ef8&token='.$abrp_token.'&tlm='.$jsonData);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
     $response = curl_exec($ch);
-    if ($response === FALSE) die(curl_error($ch));
+  if ($response === FALSE) {
+		die(curl_error($ch));
+	} else {
+		if (strpos($response,'"errorCode"') !== false )  {
+			if (strpos($response,'"errorCode": 0') === false )  {
+					echo "Error 001: <pre> " . $response . "</pre><br>";
+					die(curl_error($ch));
+			} else {
+		 		if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+			}
+		} else {
+		 if  ($showResponse === true) echo "<pre>" . $response . "</pre><br>";
+		}
+	}
+
+
   }
 }
 if (isset($ch)) curl_close($ch);
@@ -398,8 +582,10 @@ if ($cmd_cron === TRUE) {
   if ($update_sucess === TRUE) echo 'OK';
   else echo 'NO DATA';
 } else {
+
   $requesturi = isset($_SERVER['REQUEST_URI']) ? strtok($_SERVER['REQUEST_URI'], '?') : '';
-  echo '<HTML>'."\n".'<HEAD>'."\n".'<LINK REL="manifest" HREF="zoephp.webmanifest">'."\n".'<LINK REL="stylesheet" HREF="stylesheet.css">'."\n".'<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0">'."\n".'<TITLE>'.$zoename.'</TITLE>'."\n".'</HEAD>'."\n".'<BODY>'."\n".'<DIV ID="container">'."\n".'<MAIN>'."\n";
+  $requesturi .= '?pass=miapasssegretissima&username=' . $username . '&password=' . $password . '&vin=' . $vin; // Added for security
+  echo '<DIV ID="container">'."\n".'<MAIN>'."\n";
   if ($mail_bl === 'Y') echo '<FORM ACTION="'.$requesturi.'" METHOD="post" AUTOCOMPLETE="off">'."\n";
   echo '<ARTICLE>'."\n".'<TABLE>'."\n".'<TR ALIGN="left"><TH>'.$zoename.'</TH><TD><SMALL><A HREF="'.$requesturi.'">'.$lng['Update'].'</A></SMALL></TD></TR>'."\n";
   if ($cmd_acnow === TRUE) echo '<TR><TD COLSPAN="2">'.$lng['Preconditioning requested.'].'</TD><TD>'."\n";

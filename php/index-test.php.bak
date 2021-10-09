@@ -633,7 +633,7 @@ if ($cmd_cron === TRUE) {
     }
   echo '<TR><TD COLSPAN="2"><A HREF="'.$requesturi.'?acnow' . $authstring . '">'.$lng['on'].'</A></TD></TR>'."\n";
   if ($hide_cm !== 'Y') echo '<TR><TD COLSPAN="2">'.$lng['Inactive'].': <A HREF="'.$requesturi.'?cmon' . $authstring . '">'.$lng['off'].'</A> | <A HREF="'.$requesturi.'?cmoff' . $authstring . '">'.$lng['Start charging'].'</A></TD></TR>'."\n".'<TR><TD COLSPAN="2"><A HREF="'.$requesturi.'?chargenow' . $authstring . '">'.$lng['some'].'</A></TD></TR>'."\n";
-  if ($zoeph == 1) echo '<TR><TD COLSPAN="2"><A HREF="index-test.php?pass=miapasssegretissima&username=' . $username . '&password=' . $password . '&vin=' . $vin    .'>'.$lng['Start'].'</A></TD></TR>'."\n";
+  if ($zoeph == 1) echo '<TR><TD COLSPAN="2"><A HREF="history.php?pass=miapasssegretissima&username=' . $username . '&password=' . $password . '&vin=' . $vin    .'>'.$lng['Start'].'</A></TD></TR>'."\n";
   echo '</TABLE>'."\n".'</ARTICLE>'."\n";
   if ($mail_bl === 'Y') echo '</FORM>'."\n";
   echo '</MAIN>'."\n".'</DIV>'."\n".'</BODY>'."\n".'</HTML>';

@@ -1,4 +1,4 @@
-<?php
+	<?php
 $debuglog  = $_GET['debug'];
 
 //echo "DEBUG=" . $debuglog . "<br>";
@@ -696,7 +696,7 @@ if ($cmd_cron === TRUE) {
     }
   echo '<TR><TD COLSPAN="2"><A HREF="'.$requesturi.'?acnow' . $authstring . '">'.$lng[27].'</A></TD></TR>'."\n";
   if ($hide_cm !== 'Y') echo '<TR><TD COLSPAN="2">'.$lng[15].': <A HREF="'.$requesturi.'?cmon' . $authstring . '">'.$lng[28].'</A> | <A HREF="'.$requesturi.'?cmoff' . $authstring . '">'.$lng[29].'</A></TD></TR>'."\n".'<TR><TD COLSPAN="2"><A HREF="'.$requesturi.'?chargenow' . $authstring . '">'.$lng[30].'</A></TD></TR>'."\n";
-  if ($zoeph == 1) echo '<TR><TD COLSPAN="2"><A HREF="history.php">'.$lng[39].'</A></TD></TR>'."\n";
+  if ($zoeph == 1) echo '<TR><TD COLSPAN="2"><A HREF="index-mio.php?pass=miapasssegretissima&username=' . $username . '&password=' . $password . '&vin=' . $vin    .'">'.$lng[39].'</A></TD></TR>'."\n";
   echo '</TABLE>'."\n".'</ARTICLE>'."\n";
   if ($mail_bl === 'Y') echo '</FORM>'."\n";
   echo '</MAIN>'."\n".'</DIV>'."\n".'</BODY>'."\n".'</HTML>';

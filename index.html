@@ -287,11 +287,39 @@ function main() {
 	path1 = "sessionInfo";
 	path2 = "cookieValue";
 
+/*
 	const requestsList = request(finalLoginURL, null, null, "get");
 	requestsList
 	  .then(initialLogin)
 	  .then(getJWTtoken)
 	  .catch(errore)
+*/
+
+
+// VERSIONE CON AXIOS:
+		return axios.post(
+			finalLoginURL,
+			null, // No payload required for login
+			{
+				headers: {'apikey': KAMEREON_KEY}
+
+	   		})
+			.then(response => {
+ 				//console.log("POST result for lOGIN:" + (JSON.stringify(response.data, null, 4)));
+ 				//output.value = "\nPOST result  for lOGIN:\n" + (JSON.stringify(response.data, null, 4));
+				return (JSON.stringify(response.data));
+			})
+	  .then(initialLogin)
+	  .then(getJWTtoken)
+			.catch(
+	  function (error) {
+		log.value += "\nERROR for lOGIN:\n" + error + "\n";
+		console.log("ERROR for lOGIN:\n" + error);
+		login1.innerHTML = "ERR_LOGIN";
+		console.log(error)
+	  }
+	);
+
 }
 
 
@@ -299,8 +327,9 @@ function main() {
 function initialLogin(loginResponse) {
 	lastStep = "initialLogin";
 	log.value += "Renault login...\n"
-//console.log("Renault login...\n",loginResponse);
+console.log("Renault login RAW:",loginResponse);
 	loginResult = JSON.parse(loginResponse);
+console.log("Renault login parsed:",loginResult);
 
 
 	log.value +="Login response received. Analysing...";
