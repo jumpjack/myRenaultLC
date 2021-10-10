@@ -38,6 +38,35 @@ lastStep = "start";
 empty = "";
 slash = "\\";
 
+fuelQuantity = 									{"path" : "", "value" : ""};
+fuelAutonomy = 									{"path" : "", "value" : ""};
+totalMileage = 									{"path" : "", "value" : ""};
+gpsLatitude = 									{"path" : "", "value" : ""};
+gpsLongitude = 									{"path" : "", "value" : ""};
+v1_chargeStatus = 							{"path" : "", "value" : ""};
+v1_rangeHvacOn = 								{"path" : "", "value" : ""};
+v1_plugStatus = 								{"path" : "", "value" : ""};
+v1_batteryLevel = 							{"path" : "", "value" : ""};
+v2_batteryLevel = 							{"path" : "", "value" : ""};
+v2_batteryTemperature =					{"path" : "", "value" : ""};
+v2_batteryAutonomy = 						{"path" : "", "value" : ""};
+v2_batteryCapacity = 						{"path" : "", "value" : ""};
+v2_batteryAvailableEnergy = 		{"path" : "", "value" : ""};
+v2_plugStatus = 								{"path" : "", "value" : ""};
+v2_chargingStatus = 						{"path" : "", "value" : ""};
+v2_chargingRemainingTime = 			{"path" : "", "value" : ""};
+v2_chargingInstantaneousPower = {"path" : "", "value" : ""};
+hvacStatus = 										{"path" : "", "value" : ""};
+internalTemperature = 					{"path" : "", "value" : ""};
+HVAC_mode = 										{"path" : "", "value" : ""};
+globalTargetTemperature = 			{"path" : "", "value" : ""};
+HVACschedules = 								{"path" : "", "value" : ""};
+HVACcalendar = 									{"path" : "", "value" : ""};
+chargeMode =										{"path" : "", "value" : ""};
+chargeSchedules = 							{"path" : "", "value" : ""};
+chargeCalendar = 								{"path" : "", "value" : ""};
+results = [];
+
 
 
 // To get data from an item undefinely nested inside an object:
@@ -305,8 +334,8 @@ function main() {
 
 	   		})
 			.then(response => {
- 				console.log("POST result for lOGIN:" + (JSON.stringify(response.data, null, 4)));
- 				output.value = "\nPOST result  for lOGIN:\n" + (JSON.stringify(response.data, null, 4));
+ 				//console.log("POST result for lOGIN:" + (JSON.stringify(response.data, null, 4)));
+ 				//output.value = "\nPOST result  for lOGIN:\n" + (JSON.stringify(response.data, null, 4));
 				return (JSON.stringify(response.data));
 			})
 	  .then(initialLogin)
@@ -948,6 +977,12 @@ function kamereonGet(id_token, path, version) {
 			.then(response => {
  				console.log("Axios GET successful.", response);// for '" + path +  "' with version " + version + "':" + (JSON.stringify(response.data, null, 4)).replace(MY_VIN.value, "xxx MY VIN xxx"));
  				output.value = "\nAxios GET successful:\n" +  (JSON.stringify(response.data, null, 4)).replace(MY_VIN.value, "xxx MY VIN xxx");
+				selectedEndpoint  = endpointsList[EP_list.selectedIndex]
+				fo (var i=0; i<selectedEndpoint.response.length; i++) {
+					paramName = selectedEndpoint.response[i].name;
+					console.log("Assegno ", response.data[paramName] , " a " , paramName );
+					results[paramName] = response.data[paramName];
+				}
 			   return ({ status: "ok", data: response.data });
 			}).catch((error) => {
 			      if (error.response) {
@@ -1120,8 +1155,8 @@ function chargeStart() {
 				"attributes": {
 					"action": "start"
 				}
-				}
 			}
+		}
 			console.log(kamereonPost(JWT.value,  "actions/charging-start", body, "", 1, ""));
 }
 
