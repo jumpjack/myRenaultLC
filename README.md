@@ -27,6 +27,18 @@ Since version 2.4.0 the web page uses a php script ( https://github.com/jumpjack
 		}
 	}
 
+Syntax for calling the script:
+
+    /gigya-login.php?gigyakey=XXXXXXXXX&gigyasite=XXXXXXXX&kamereon=XXXXXXXX&username=XXXXXXXXX&password=XXXXXXXX
+
+- gigyakey:  see https://github.com/jumpjack/myRenaultLC/blob/main/myrenault-public.js
+- gigyasite: see https://github.com/jumpjack/myRenaultLC/blob/main/myrenault-public.js
+- kamereon:  see https://github.com/jumpjack/myRenaultLC/blob/main/myrenault-public.js
+- username: Of MyRenault app
+- password: Of MyRenault app
+
+
+
 ---------
 
 Alternatives
