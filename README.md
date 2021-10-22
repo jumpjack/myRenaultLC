@@ -39,6 +39,22 @@ Syntax for calling the script:
 - password: Of MyRenault app
 
 
+## Retrieving data without logging in
+
+If you don't want to put at all your credential, you can perform a strandard login on MyRenault official web page (for Italy: https://myr.renault.it/documentazione.html ) and go to "vehicle details" tab/page. Then swith to console mode, and look for:
+
+ - accountId
+ - JWT token (named "oneSession" in cookies list)
+
+Refer to following pictures to retrieve data:
+
+![image](https://user-images.githubusercontent.com/1620953/138456497-f29f10ee-8087-4c30-b76e-96dd162ea2fc.png)
+
+Put data in the web page:
+
+![image](https://user-images.githubusercontent.com/1620953/138456802-0872e44e-d148-46a7-a9de-111b2fc78912.png)
+
+Now you can temporarily download data; JWT token will expire in some minutes, and you will have to login again to MyRenault page and copy it again; accountId and VIN remain of course unchanged.
 
 ---------
 
