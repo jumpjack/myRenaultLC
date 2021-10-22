@@ -16,6 +16,17 @@ Security warning
 
 If you don't want to fill-in your credentials in an unknown page, download the page to your PC: you will get an index.html file and many .js files into same folder. Just open index.html in your favourite browser and start testing.
 
+Since version 2.4.0 the web page uses a php script ( https://github.com/jumpjack/myRenaultLC/blob/main/gigya-login.php ) located in its own folder to perform authentication on Gigya server; the user can use the script he prefers, as long as it returns this structure:
+
+
+	{
+		"loginData" : {
+			"cookie" : "xxxxxxxxxxxxxxxxxx" ,
+			"JWT" : "xxxxxxxxxxxxxxxxxx",
+			"personId" : "xxxxxxxxxxxxxxxxxx"
+		}
+	}
+
 ---------
 
 Alternatives
@@ -24,11 +35,15 @@ Alternatives
  - Python APIs (you will need to install Python and operate by command line):
     - https://github.com/hacf-fr/renault-api  
     - https://github.com/jamesremuscat/pyze (from the author of the initial blog post about Renault APIs: https://muscatoxblog.blogspot.com/2019/07/delving-into-renaults-new-api.html)
+    - https://github.com/ECOM-Engineering/renault-api/blob/main/src/renault_api/renault_vehicle.py
 
  - PHP pages (require PHP server):
    - https://github.com/db-EV/ZoePHP
 
-
+- NODE js (javascript server side):
+   - https://github.com/rikardwissing/node-my-renault-api
+ 
+ 
  - ioBroker-Adapter: https://github.com/fungus75/ioBroker.zoe2  (ioBroker: https://www.iobroker.net/)
  - iOS widget (javascript): https://gist.github.com/mountbatt/772e4512089802a2aa2622058dd1ded7
 
