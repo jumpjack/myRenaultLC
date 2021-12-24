@@ -38,6 +38,9 @@ Syntax for calling the script:
 - username: Of MyRenault app
 - password: Of MyRenault app
 
+**Note:** the page can call a php script in its own folder works only if the page is stored on a server supporting php; if you are unsing the page locally, you must host the script on a servert supporting php, and specify its full url in the page:
+![image](https://user-images.githubusercontent.com/1620953/147364680-367f55ae-96e9-44d6-b8c0-649293bde9b2.png)
+
 
 ## Retrieving data without logging in
 
