@@ -1,0 +1,1219 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="PSPad editor, www.pspad.com">
+  <title>Unofficial MyRenault dashboard for browsers</title>
+
+
+	<script src="myrenault-public.js"></script>
+	<script src="endpoints.js"></script>
+	<script src="errors.js"></script>
+	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+  <script>
+
+// 1.5.0 New Axios method implemented for login and query (to be cleaned up)
+// 1.4.0 Added plenty of debug error messages during login; cleaned up page and code; added textareas for endpoint and payload for manual testing
+// 1.3.0 Addes some test buttons and functions for actions; implemented Axios for actions
+// 1.1.1 Fixed bug of post/get; actions not working yet.
+// 1.1.0 Added actions support
+// 1.0.2 Reordered enpoints, enhanced output
+// 1.0.1 Oscurato VIN in output
+// 1.0.0 Prima versione pubblica
+
+
+GIGYA_API_KEY = null;
+KAMEREON_KEY = null;
+
+JWTextracted = null;
+countdownStarted = false;
+lastStep = "start";
+
+
+// To get data from an item undefinely nested inside an object:
+// https://stackoverflow.com/posts/43849204/timeline
+const resolvePath = (object, path, defaultValue) => path
+   .split('.')
+   .reduce((o, p) => o ? o[p] : defaultValue, object)
+
+
+function init() {
+	gigyaurl = data.servers.gigyaProd.target;
+	GIGYA_API_KEY= newData.servers.gigyaProd.apikey;
+	kamereonurl = data.servers.wiredProd.target;
+	KAMEREON_KEY = newData.servers.wiredProd.apikey;
+}
+
+function loadEndpoints() {
+	CR = document.createElement("BR");
+	for (var i=0; i<endpointsList.length; i++) {
+		var endpointUrl= document.createElement("A");
+		endpointUrl.setAttribute("onclick", "callByClick('" + endpointsList[i].name  + "')");
+		//endpointUrl.setAttribute("HREF", "");
+//console.log(endpointUrl);
+		endpoints.appendChild(endpointUrl);
+		endpoints.appendChild(CR);
+		endpointUrl.innerHTML = endpointsList[i].name+ "<br>";
+	}
+
+};
+
+
+function callByClick(endp) {
+	// Called when clicked on endpoint
+		endpoint.value = endp;
+	startCountdown();
+		justQuery();
+}
+
+
+function request(url, setMyHeader, actionHeader, requestType) {
+console.log("Processing " , url , "...");
+console.log("Header ricevuto: '" , actionHeader , "'");
+  return new Promise(function (resolve, reject) {
+	const xhr = new XMLHttpRequest();
+	xhr.timeout = 2000;
+
+	xhr.onreadystatechange = function(e) {
+	  if (xhr.readyState === 4) {
+		if (xhr.status === 200) {
+///console.log(">>>>>>>>>>Risposta ad URL " , url , ":", xhr.response);
+		  resolve(xhr.response)
+		} else {
+					console.log("not 200: " , xhr.status);
+					log.value += "\n\nError at step ' " + lastStep + "' for URL " + url + ":\n\nERROR " + xhr.status;
+					if (errors[xhr.status] != null) {
+						console.log(errors[xhr.status]);
+						log.value += "\n" + errors[xhr.status].message + "\n" + errors[xhr.status].description;
+					} else {
+						log.value += "\nSorry, no further info on this error.\n";
+					}
+					reject(xhr.status)
+				}
+			} else {
+				//console.log("Ongoing,Status=", xhr.readyState);
+			}
+		}
+
+	xhr.ontimeout = function () {
+			console.log("\n>>>>>>>>>XHR timeout error.\n");
+			log.value += "\n>>>>>>>>>XHR timeout error.\n";
+	  reject('timeout');
+	}
+
+	xhr.onerror = function (e) {
+		console.log("\n>>>>>>>>>XHR  error: ", e , "\n");
+		log.value += "\n>>>>>>>>>XHR  error: ", e , "\n";
+	  reject('error');
+	}
+
+	if (setMyHeader === true) {
+console.log("======= RICHIESTA CON HEADER");
+//console.log("url:",decodeURIComponent(url));
+		if (requestType == "get") {
+console.log("Richiesta GET");
+			xhr.open('get', url  , true)
+		} else {
+console.log("Richiesta POST");
+			xhr.open('post', url  , true)
+		}
+		xhr.setRequestHeader("x-gigya-id_token",JWT.value);
+		xhr.setRequestHeader("apikey",KAMEREON_KEY);
+		xhr.setRequestHeader("Content-type","application/vnd.api+json");
+
+		if ((actionHeader != null) && (actionHeader.length > 0)) {
+console.log("L'HEADER VA ELABORATO, PROCEDO");
+console.log(actionHeader);
+			//xhr.setRequestHeader("data",JSON.parse(actionHeader));
+		} else {
+console.log("No header");
+		}
+	} else {
+		xhr.open('get', url , true)
+	}
+// {"data":{"type": "HvacStart","attributes": {"action": "start","targetTemperature": "25"}}}
+	if (setMyHeader === true) {
+		if (endpoint.value == "actions/hvac-start") {
+console.log("payload test");
+			try {
+				xhr.send('{"data":{"type": "HvacStart","attributes": {"action": "start","targetTemperature": "25"}}}');
+			} catch (err) {
+				console.log(">>>>>>>>>>>>Request error 001:", err);
+				log.value += "\nRequest error 001:" + err + "\n";
+			}
+		} else {
+console.log("no payload");
+			try {
+				xhr.send();
+			} catch (err) {
+				console.log(">>>>>>>>>>>>>>>>Request error 002:", err);
+				log.value += "\nRequest error 002:" + err + "\n";
+			}
+		}
+	} else {
+		try {
+			xhr.send();
+		} catch (err) {
+			console.log(">>>>>>>>>>>>>>>Request error 003:", err);
+			log.value += "\nRequest error 003:" + err + "\n";
+		}
+	}
+  })
+}
+
+
+function justQuery() {
+lastStep = "justQuery";
+   log.value = "Endpoint: " + endpoint.value + "\n";
+	log.value +="Sending query...\n";
+	console.log("=== DIRECT QUERY");
+
+	if ((endpoint.value).indexOf("?") >0 ) { // in case quetion mark is included in manual input...
+		QUESTION_MARK = "&";
+	} else  {
+		QUESTION_MARK = "?";
+	}
+
+	queryUrl = kamereonurl + "/commerce/v1/accounts/" +
+		accountId.value +
+		"/kamereon/kca/car-adapter/v1/cars/" + MY_VIN.value +
+		"/" +
+		endpoint.value +
+		QUESTION_MARK +
+		"apikey=" + KAMEREON_KEY +
+		"&country=" + country.value;
+console.log("finalQueryUrl ", queryUrl);
+
+//kamereonGet(JWT.value,  "lock-status",  1)
+
+
+	const sendQuery = request(queryUrl, true, actionPayloadSpan.value, "get"); // DEBUG!! tolto CORS!
+	sendQuery
+	  .then(showResults)
+	  .catch(vehicleError)
+	return ("query finished.");
+
+}
+
+
+
+function sendManualUrl() {
+	lastStep = "sendManualUrl";
+  log.value = "Manual url:\n";
+	log.value += manualUrl.value + "\n";
+	console.log("=== sendManualUrl");
+	queryUrl = manualUrl.value;
+console.log("finalQueryUrl ", queryUrl);
+	const sendQuery = request(queryUrl, true, actionPayloadSpan.value, "get");
+	sendQuery
+	  .then(showResults)
+	  .catch(vehicleError)
+	return ("query finished.");
+
+}
+
+
+
+function main() {
+  log.value = "Endpoint: " + endpoint.value + "\n";
+	cookieValue.value="waiting...";
+	JWT.value = "waiting...";
+	personId.value = "waiting...";
+	accountId.value = "waiting...";
+	accountId2.value = "waiting...";
+	
+	init();
+	startCountdown();
+	loginUrl =  gigyaurl + "/accounts.login?loginID=" + username.value + "&password=" + password.value + "&apikey=" + GIGYA_API_KEY;
+	finalLoginURL =  "http://win98.altervista.org/space/exploration/myp.php?pass=miapass&mode=native&url=" + encodeURIComponent(loginUrl);
+	path1 = "sessionInfo";
+	path2 = "cookieValue";
+
+	const requestsList = request(finalLoginURL, null, null, "get");
+	requestsList
+	  .then(initialLogin)
+	  .then(getJWTtoken)
+	  .catch(errore)
+}
+
+
+
+function initialLogin(loginResponse) {
+	lastStep = "initialLogin";
+	log.value += "Renault login...\n"
+//console.log("Renault login...\n",loginResponse);
+	loginResult = JSON.parse(loginResponse);
+
+
+	log.value +="Login response received. Analysing...";
+	if (loginResult.errorCode === 400002) {
+		console.log("ERR 002 - Cannot retrieve Renault cookie, missing login data:\n"+ loginResult.errorDetails);
+		log.value += "ERR 002 - Cannot retrieve Renault cookie, missing login data:\n"+ loginResult.errorDetails + "\n";
+		return "error 002";
+	}
+
+
+	if (loginResult.errorCode === 403042) {
+		console.log("ERR 042 - Cannot retrieve Renault cookie, invalid login data:\n"+ loginResult.errorDetails);
+		log.value += "ERR 042 - Cannot retrieve Renault cookie, invalid login data:\n"+ loginResult.errorDetails + "\n";
+		return "error 042";
+	} 
+
+
+	if (loginResult.errorCode != "0") {
+		console.log("ERR unknwon - Cannot retrieve Renault cookie, login failed:\n"+ loginResult.errorDetails);
+		log.value += "ERR unknown - Cannot retrieve Renault cookie, login failed:\n"+ loginResult.errorDetails + "\n";
+		return "error unknown";
+	}
+
+	console.log("Credentials accepted, Renault cookie retrieved.");
+	log.value += "\nCredentials accepted, Renault cookie retrieved.";
+	cookie = loginResult.sessionInfo.cookieValue;
+	renaultUID = loginResult.UID; // needed for Axios calls?
+
+	cookieValue.value = loginResult.sessionInfo.cookieValue;
+//console.log("Cookie=", loginResult.sessionInfo.cookieValue);
+	return(loginResult.sessionInfo.cookieValue)
+}
+
+
+
+
+function getJWTtoken(cookie) {
+	lastStep = "getJWTtoken";
+	if (cookie.indexOf("error") >= 0) {
+		console.log("Cannot proceed and ask for JWT due to failed login.");
+		return cookie;
+	}
+
+	JWTheaders = {
+		'login_token': cookie,
+		'apikey': KAMEREON_KEY,
+	    'fields' : 'data.personId,data.gigyaDataCenter',
+		'expiration': 87000
+	};
+
+
+console.log("====JWT");
+	console.log("Logged in, searching for JWT...");
+	log.value += "\nLogged in, searching for JWT...\n";
+console.log("====JWT");
+	JWTurl = "https://gigya-it-it.renault.it/accounts.getJWT?fields=data.personId%2Cdata.gigyaDataCenter&expiration=600&APIKey=" + GIGYA_API_KEY +
+	"&sdk=js_latest&authMode=cookie&pageURL=https%3A%2F%2Fmyr.renault.it%2F&sdkBuild=12426&format=json&login_token=" +	cookie;
+	finalJWTurl= "http://win98.altervista.org/space/exploration/myp.php?pass=miapass&mode=native&url=" + encodeURIComponent(JWTurl);
+//console.log("Processing ", finalJWTurl);
+
+// VERSIONE CON AXIOS:
+		return axios.post(
+			finalJWTurl,
+			null, // No payload required for retrieveing JWT
+			{
+				headers: JWTheaders
+	   		})
+			.then(response => {
+ 				//console.log("POST result:" + (JSON.stringify(response.data, null, 4)));
+ 				//output.value = "\nPOST result:\n" + (JSON.stringify(response.data, null, 4));
+                console.log("response.id: "+ response.data.id_token);
+				return ({ status: "ok", data: response.data.id_token });
+			})
+			.then(
+				response2 => {
+				console.log("Pippo", response2);
+				console.log("Pippo2", response2.data);
+				extractJWT(response2.data);
+				return "Che ne so?";
+				}
+			)
+			.then (
+				response3 => {
+				console.log("Pippo3", response3);
+				getPersonId();
+				//extractJWT(response.data);
+				}
+			)
+			.catch(
+	  function (error) {
+		log.value += "\nERROR for POST while getting JWT:\n" + error + "\n";
+		console.log("ERROR for POST while getting JWT:\n" + error);
+		console.log(error)
+	  }
+	);
+
+
+
+/* VERSIONE CON REQUEST():
+	const JWTrequest = request(finalJWTurl,null ,null , "get");
+	JWTrequest
+	  .then(extractJWT)
+	  .then(getPersonId)
+	  .catch(JWTerror)
+	return (cookie);
+}
+*/
+}
+
+
+function getPersonId(dummy) {
+	lastStep = "getPersonId";
+console.log("====personId");
+	console.log("Found JWT, searching for Person Id...");
+	var personUrl = gigyaurl + "/accounts.getAccountInfo?apikey=" + GIGYA_API_KEY + "&login_token=" + cookieValue.value;
+	var finalPersonurl= "http://win98.altervista.org/space/exploration/myp.php?pass=miapass&mode=native&url=" + encodeURIComponent(personUrl);
+
+	personHeaders = {
+		'login_token': cookie,
+		'apikey': KAMEREON_KEY,
+	};
+
+
+// VERSIONE CON AXIOS:
+		return axios.post(
+			finalPersonurl,
+			null, // No payload required for retrieveing personId
+			{
+				headers: personHeaders
+	   		})
+			.then(response => {
+ 				//console.log("POST result for Person:" + (JSON.stringify(response.data, null, 4)));
+ 				//output.value = "\nPOST result for Person:\n" + (JSON.stringify(response.data, null, 4));
+                console.log("response.id: "+ response.data.data.personId);
+				return ({ status: "ok", data: response.data.data.personId });
+			})
+			.then (response2 => {
+ 				//console.log("POST result for Person2:" + (JSON.stringify(response2, null, 4)));
+ 				//output.value = "\nPOST result for Person:\n" + (JSON.stringify(response.data, null, 4));
+                console.log("response2: ", response2);
+				personId.value = response2.data
+				getAccountId("pippo");
+				return ({ status: "ok", data: null });
+			})
+			.catch(
+	  function (error) {
+		log.value += "\nERROR for POST while getting personId:\n" + error + "\n";
+		console.log("ERROR for POST while getting personId:\n" + error);
+		console.log(error)
+	  }
+	);
+
+
+/* VERSIONE CON REQUEST():
+	const personIdRequest = request(finalPersonurl,null,null, "post");
+	personIdRequest
+	  .then(extractPersonId)
+	  .then(getAccountId)
+	  .catch(personIdError)
+	return (cookie);
+*/
+
+}
+
+function getAccountId(dummy) {
+	lastStep = "getAccountId";
+	log.value += "\n\nFound Person Id, searching for accounts...";
+console.log("====accountId");
+	accountUrl = kamereonurl + "/commerce/v1/persons/" +
+	personId.value +
+	"?apikey=" + KAMEREON_KEY +
+	"&country=" + country.value;
+	var finalAccounturl= "http://win98.altervista.org/space/exploration/myp.php?pass=miapass&mode=native&url=" + encodeURIComponent(accountUrl);
+
+console.log("URL PER ACCOUNT: " + accountUrl);
+
+	accountHeaders = {
+		'apikey': KAMEREON_KEY,
+        'x-gigya-id_token' :  JWT.value,
+	};
+
+// VERSIONE CON AXIOS:
+		return axios.get(
+			accountUrl,
+				{
+					headers: accountHeaders
+				}
+			)
+			.then(response => {
+ 				//console.log("POST result for Account:" + (JSON.stringify(response.data, null, 4)));
+ 				//output.value = "\nPOST result for Person:\n" + (JSON.stringify(response.data, null, 4));
+                console.log("response: ", response);
+                extractAccountId(response.data);
+				getVINs();
+				return ({ status: "ok", data: response.data });
+			})
+			.catch(
+	  function (error) {
+		log.value += "\nERROR for POST while getting accountId:\n" + error + "\n";
+		console.log("ERROR for POST while getting accountId:\n" + error);
+		console.log(error)
+	  }
+	);
+
+
+/* VERSIONE CON REQUEST():
+	const accountIdRequest = request(accountUrl, true,null, "get");
+	accountIdRequest
+	  .then(extractAccountId)
+	  .then(getVINs)
+	  .catch(accountIdError)
+
+*/
+	return (cookie);
+}
+
+
+
+function getVINs(a) {
+	lastStep = "getVINs";
+console.log("=== VIN");
+	console.log("Found account, searching for VIN...");
+	log.value += "\n\nFound account, searching for VIN...";
+
+	vehiclesListQueryUrl = kamereonurl + "/commerce/v1/accounts/" +
+		accountId2.value +
+		"/vehicles" +
+		"?apikey=" + KAMEREON_KEY +
+		"&country=" + country.value;
+	finalVehiclesListQueryUrl= "http://win98.altervista.org/space/exploration/myp.php?pass=miapass&mode=native&url=" + encodeURIComponent(vehiclesListQueryUrl);
+
+console.log("vehiclesListQueryUrl ", vehiclesListQueryUrl);
+
+	accountHeaders = {
+		'apikey': KAMEREON_KEY,
+        'x-gigya-id_token' :  JWT.value,
+	};
+
+// VERSIONE CON AXIOS:
+		return axios.get(
+			vehiclesListQueryUrl,
+				{
+					headers: accountHeaders
+				}
+			)
+			.then(response => {
+ 				//console.log("POST result for VIN:" + (JSON.stringify(response.data, null, 4)));
+ 				//output.value = "\nPOST result for VIN:\n" + (JSON.stringify(response.data, null, 4));
+                console.log("response: ", response);
+				return ({ status: "ok", data: response.data });
+			})
+			.then(response2 => {
+ 				//console.log("Extract VIN from:" + (JSON.stringify(response2, null, 4)));
+ 				//output.value = "\nPOST result for VIN:\n" + (JSON.stringify(response.data, null, 4));
+                console.log("response2: ", response2);
+				extractVIN(response2.data);
+				return ({ status: "ok", data: response2.data });
+			})
+			.catch(
+	  function (error) {
+		log.value += "\nERROR for POST while getting VIN:\n" + error + "\n";
+		console.log("ERROR for POST while getting VIN:\n" + error);
+		console.log(error)
+	  }
+	);
+
+
+/* VESIONE CON REQUEST():
+	const sendQuery = request(vehiclesListQueryUrl, true,null, "get");
+	sendQuery
+	  .then(extractVIN)
+	  .then(getVehicleData)
+	  .catch(vehicleError)
+*/
+
+	return ("query finished.");
+}
+
+
+
+
+////////////////////////////////////////////////
+function getVehicleData() {
+	lastStep = "getVehicleData";
+	log.value +="\n\nLOGIN SUCCESSFUL.\nSending query...\n";
+console.log("=== QUERY");
+	if ((endpoint.value).indexOf("?") >0 ) { // in case quetion mark is included in manual input...
+		QUESTION_MARK = "&";
+	} else  {
+		QUESTION_MARK = "?";
+	}
+
+	queryUrl = kamereonurl + "/commerce/v1/accounts/" +
+		accountId.value +
+		"/kamereon/kca/car-adapter/v1/cars/" + MY_VIN.value +
+		"/" +
+		endpoint.value +
+		QUESTION_MARK +
+		"apikey=" + KAMEREON_KEY +
+		"&country=" + country.value;
+
+console.log("finalQueryUrl ", queryUrl);
+
+	queryHeaders = {
+		'apikey': KAMEREON_KEY,
+        'x-gigya-id_token' :  JWT.value,
+        'Content-type'  : 'application/vnd.api+json'
+	};
+
+	actionPayload = actionPayloadSpan.value;
+
+
+// VERSIONE CON AXIOS:
+		return axios.post(
+			queryUrl,
+			actionPayload,
+			{
+				headers: queryHeaders
+	   		})
+			.then(response => {
+ 				console.log("POST result for vechile data:" + (JSON.stringify(response.data, null, 4)));
+ 				//output.value = "\nPOST result for vechile data:\n" + (JSON.stringify(response.data, null, 4));
+                console.log("response: ", response);
+				return ({ status: "ok", data: response });
+			})
+			.catch(
+	  function (error) {
+		log.value += "\nERROR for POST while getting vehicle data:\n" + error + "\n";
+		console.log("ERROR for POST while getting vehicle data:\n" + error);
+		console.log(error)
+	  }
+	);
+
+
+
+
+/* VERSIONE CON REQUEST():
+	const sendQuery = request(queryUrl, true, actionPayloadSpan.value, "get");
+	sendQuery
+	  .then(showResults)
+	  .catch(vehicleError)
+
+*/
+
+	console.log("QUERY FINISHED");
+	return ("\n\n ==== Query finished ====");
+}
+////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+function extractJWT(JWTresponse) {
+	lastStep = "extractJWT";
+console.log("JWTresponse:" , JWTresponse);
+//	var JSONdata = JSON.parse(JWTresponse);
+//console.log("Extracted:" , JSONdata);
+
+	console.log("JWT response received. Analysing...");
+	log.value +="JWT response received. Analysing...";
+
+	log.value +="\nJWT correctly retrieved.";
+	console.log("JWT correctly retrieved.");
+
+	JWT.value = JWTresponse; //JSONdata.id_token;
+
+	loginPayloadForReqbin.innerHTML = "<pre>apikey :" + KAMEREON_KEY + "<br>" +
+							"Content-type : application/vnd.api+json<br>" +
+							"x-gigya-id_token : " + JWTresponse + "<br></pre>";
+	return JWTresponse;
+}
+
+
+
+
+function extractPersonId(personIdResponse) {
+	lastStep = "extractPersonId";
+	console.log("========personId extraction");// , personIdResponse);
+	console.log("personId response received, analysing...");// , personIdResponse);
+	log.value += "\npersonId response received, analysing...";
+	var JSONdata = JSON.parse(personIdResponse);
+console.log("personId response:" , JSONdata);
+
+
+	if (JSONdata.errorCode != "0") {
+		console.log("ERR unknwon - Cannot extract personId from response:\n", JSONdata);
+		log.value += "ERR unknown - Cannot extract personId from response:\n" +  personIdResponse;
+		return "Error on personId extraction:" + personIdResponse;
+	}
+
+	console.log("personId successfully extracted:" + JSONdata.data.personId);
+	log.value += "\n\npersonId successfully extracted:\n" + JSONdata.data.personId;
+
+	personId.value = JSONdata.data.personId;
+	renaultUID2 = JSONdata.UID;
+
+console.log(">>>>>>>>>>UIDS:", renaultUID, renaultUID2);
+}
+
+
+
+function extractAccountId(accountIdResponse) {
+	lastStep = "extractAccountId";
+	console.log("========accountId extraction", accountIdResponse);
+	console.log("accountId response received, analysing...");// , personIdResponse);
+	log.value += "\naccountId response received, analysing...";
+	var JSONdata = /*JSON.parse(*/accountIdResponse/*)*/;
+
+	if (JSONdata.accounts === null) { // No error=0 in case of success!
+		console.log("ERR unknwon - Cannot extract accountId from response:\n", accountIdResponse);
+		log.value += "ERR unknown - Cannot extract accountId from response:\n" +  accountIdResponse;
+		return "Error on accountId extraction:" + accountIdResponse;
+	}
+
+	accountId.value = JSONdata.accounts[0].accountId;
+	accountIdType.value = JSONdata.accounts[0].accountType;
+	accountId2.value = JSONdata.accounts[1].accountId;
+	accountId2Type.value = JSONdata.accounts[1].accountType;
+
+	console.log("accountId successfully extracted:" + JSONdata.accounts[0].accountId + ", " + JSONdata.accounts[1].accountId);
+	log.value += "\n\naccountId successfully extracted:\n" + JSONdata.accounts[0].accountId + ", " + JSONdata.accounts[1].accountId;
+}
+
+
+
+function extractVIN(VINResponse) {
+	lastStep = "extractVIN";
+	console.log("============ VIN:" , VINResponse);
+	console.log("VIN response recevied, analysing..."); // , VINResponse);
+	log.value += "\nVIN response recevied, analysing...";
+
+	var JSONdata = /*JSON.parse(*/VINResponse/*)*/;
+
+console.log("VINResponse obj: " , JSONdata);
+
+	if (JSONdata.vehicleLinks === null) { // No error=0 in case of success!
+		console.log("ERR unknwon - Cannot extract VIN from response:\n", JSONdata);
+		log.value += "ERR unknown - Cannot extract VIN from response:\n" +  VINResponse;
+		return "Error on VIN extraction:" + VINResponse;
+	}
+
+	MY_VIN.value = JSONdata.vehicleLinks[0].vin;
+
+	var testlink = kamereonurl + "/commerce/v1/accounts/" +
+		accountId.value +
+		"/kamereon/kca/car-adapter/v1/cars/" + MY_VIN.value +
+		"/" +
+		"cockpit" +
+		"?" +
+		"apikey=" + KAMEREON_KEY +
+		"&country=" + country.value;
+
+	testUrlReqbin.innerHTML = "<a href='" + testlink + "'>" + testlink + "</a><br>" ;
+
+	console.log("VIN successfully extracted:" + JSONdata.vehicleLinks[0].vin);
+	log.value += "\n\nVIN successfully extracted:\n" + JSONdata.vehicleLinks[0].vin;
+}
+
+
+
+function showResults(queryResponse) {
+	lastStep = "showResults";
+	console.log("queryResponse:", queryResponse);
+//	document.getElementById("status").innerHTML = queryResponse;
+	JSONdataFinal = JSON.parse(queryResponse);
+	console.log("Extracted:" , JSONdataFinal);
+	output.value = "Results for endpoint " + endpoint.value + ":\n" + (JSON.stringify(JSONdataFinal, null, 4)).replace(MY_VIN.value,"xxxMYVINxxx"); ;
+
+
+}
+
+
+
+function errore(e) {
+	console.log("Errore in login:" + e);
+	log.value += "\nErrore in login:" + e;
+	return ("Errore");
+}
+
+
+
+function JWTerror(e) {
+	console.log("Errore JWT: " + e);
+	log.value += "\nErrore in JWT:" + e;
+	JWT.value="JWT error";
+	return ("!!!!!!!!!!!!Errore JWT");
+}
+
+
+
+function personIdError(e) {
+	console.log(e);
+	log.value += "\nErrore in personId:" + e;
+	personId.value = "!!!!!!!!!!!! Person Id error";
+	
+	return ("Errore PersonId");
+}
+
+
+
+function accountIdError(e) {
+	console.log(e);
+	accountId.value = "!!!!!!!!!!!! Account ID error";
+	log.value += "\nErrore in accountId:" + e;
+	return ("Errore accountId");
+}
+
+
+function vehicleError(e) {
+	console.log(e);
+	log.value += "!\nVehicle query error";
+	return ("Errore PersonId");
+}
+
+
+
+
+function startCountdown() {
+ if (countdownStarted) return;
+ countdownStarted = true;
+  var minute = 10;
+  var sec = 59;
+  if (myInterval != null) clearInterval(myInterval);
+  var myInterval=setInterval(function() {
+	document.getElementById("countdown").innerHTML = minute + " : " + sec;
+	sec--;
+	if (sec == 00) {
+	  minute --;
+	  sec = 59;
+	  if (minute == 0) {
+		clearInterval(myInterval);
+		alert("New login required!");
+		countdownStarted = false;
+	  }
+	}
+  }, 1000);
+}
+
+
+
+function kamereonGet(id_token, path, version) {
+// https://github.com/joco73/se.cohen.renaultze/blob/a597635a3a6365be6a8e6edb650a4b8f986b877f/lib/api.js#L372
+	console.log("Sending GET request for '" + path + "' using library version " + version + "...");
+	log.value = "Sending GET request for '" + path + "' using library version " + version + "...\n";
+
+		if (path.indexOf("?") > 0 ) { // in case quetion mark is included in manual input...
+			QUESTION_MARK = "&";
+		} else  {
+			QUESTION_MARK = "?";
+		}
+
+		var fullUrl = kamereonurl + '/commerce/v1/accounts/' + accountId.value + "/kamereon/kca/car-adapter/v" + version + "/cars/" + MY_VIN.value + "/" + path +
+			QUESTION_MARK +
+			"country=" +
+			country.value;
+
+		return axios.get(
+			fullUrl, {
+				headers: {
+					'x-gigya-id_token': id_token,
+					'apikey': KAMEREON_KEY
+				}
+			})
+			.then(response => {
+ 				console.log("POST result for '" + path +  "' with version " + version + "':" + (JSON.stringify(response.data, null, 4)).replace(MY_VIN.value, "xxx MY VIN xxx"));
+ 				output.value = "\nGET result for '" + path  +  "' with version " + version + ":\n" +  (JSON.stringify(response.data, null, 4)).replace(MY_VIN.value, "xxx MY VIN xxx");
+			   return ({ status: "ok", data: response.data });
+			}).catch(
+	  function (error) {
+ 				log.value += "\nERROR for GET '" + path  +  "': \n" + error + "\n";
+		console.log("GET error for " + path);
+		console.log(error)
+	  }
+	);
+	}
+
+
+function kamereonPost(id_token, path, data, version, sourceField, destField) {
+// https://github.com/joco73/se.cohen.renaultze/blob/a597635a3a6365be6a8e6edb650a4b8f986b877f/lib/api.js#L372
+	console.log("Sending POST request for '" + path + "' using library version " + version + "...");
+	log.value = "Sending POST request for '" + path + "' using library version " + version + "...\n";
+
+	if (path.indexOf("?") > 0 ) { // in case quetion mark is included in manual input...
+		QUESTION_MARK = "&";
+	} else  {
+		QUESTION_MARK = "?";
+	}
+
+	var fullUrl = kamereonurl + '/commerce/v1/accounts/' + accountId.value + "/kamereon/kca/car-adapter/v" + version + "/cars/" + MY_VIN.value + "/" + path +
+			QUESTION_MARK +
+			"country=" + country.value;
+
+		return axios.post(
+			fullUrl,
+			data,
+			{
+				headers: {
+					'Content-type': 'application/vnd.api+json',
+					'x-gigya-id_token': id_token,
+					'apikey': KAMEREON_KEY
+				}
+	   		})
+			.then(response => {
+ 				console.log("POST result for '" + path +  "' with version " + version + "':" + (JSON.stringify(response.data, null, 4)).replace(MY_VIN.value, "xxx MY VIN xxx"));
+ 				output.value = "\nPOST result for '" + path +  "' with version " + version + "':\n" + (JSON.stringify(response.data, null, 4)).replace(MY_VIN.value, "xxx MY VIN xxx");
+                console.log("Source: "+ sourceField + " = '"+ resolvePath(response, sourceField) + "'");
+				if ((sourceField !== "") && (destField !== "")) {
+					// Update page with POST result data as requested:
+					document.getElementById(destField).value = resolvePath(response, sourceField);
+				}
+				return ({ status: "ok", data: response.id });
+			})
+			.catch(
+	  function (error) {
+ 				log.value += "\nERROR for KamereonPOST '" + path  +  "' :\n" + error + "\n";
+	   			console.log("POST error for " + path);
+				console.log(error)
+	  }
+	);
+	}
+
+
+
+function getWithVersion(v) {
+	log.value ="";
+	output.value="";
+        kamereonGet(JWT.value, actionEndpoint.value, v)
+}
+
+
+function postWithVersion(v) {
+	log.value ="";
+	output.value="";
+	try {
+		body = {
+			"data": JSON.parse(actionPayloadSpan.value)
+		};
+	} catch(e) {
+		log.value = "JSON error parsing payload.\n";
+		return;
+	}
+    kamereonPost(JWT.value, actionEndpoint.value, body, v, "", "")
+}
+
+
+
+function refreshHVACStatus() {
+		HVACid.value = "please wait...";
+		let body = {
+			"data": {
+					"type": "RefreshHvacStatus"
+				}
+		};
+		var HVACresult = kamereonPost(JWT.value,  "actions/refresh-hvac-status", body, 1, "data.id", "HVACid")
+		console.log("HVACresult prima =",HVACresult);
+  		return HVACresult.id
+}
+
+
+function HVAC_on(finalTemp, startDate) {
+console.log("Accendo id :",HVACid.value, " in data " , startDate , " a temperatura  " , finalTemp);
+		let body = {
+			"data": {
+					"type": "HvacStart",
+					"id": HVACid.value,
+					"attributes": {
+							"action": "start",
+							"id": HVACid.value,
+							"targetTemperature": finalTemp,
+							"startDateTime": startDate  // "2021-09-29T08:38:00Z"
+					}
+			}
+			};
+
+
+			console.log(kamereonPost(JWT.value,  "actions/hvac-start", body, 1, "", ""));
+			HVACid.value="-";
+			//console.log(kamereonGet(JWT.value, "hvac-status", 1));
+}
+
+function HVAC_off() {
+		let body = {
+			"data": {
+				"type": "HvacStart",
+				"attributes": {
+					"action": "stop"
+				}
+			}
+		};
+			console.log(kamereonPost(JWT.value,  "actions/hvac-start", body, 1, "", ""));
+}
+
+
+
+function HVAC_setTemp() {
+		let body = {
+			"data": {
+				"type": "HvacStart",
+				"attributes": {
+					"action": "start",
+							"targetTemperature": HVACtemp.value
+				}
+			}
+		};
+			console.log(kamereonPost(JWT.value,  "actions/hvac-start", body, 1, "", ""));
+}
+
+
+function chargeStart() {
+		let body = {
+			"data": {
+				"type": "ChargingStart",
+				"attributes": {
+					"action": "start"
+				}
+				}
+			}
+			console.log(kamereonPost(JWT.value,  "actions/charging-start", body, "", 1, ""));
+}
+
+function chargeStop() {
+		let body = {
+			"data": {
+				"type": "ChargingStop",
+				"attributes": {
+					"action": "stop"
+				}
+				}
+			}
+			console.log(kamereonPost(JWT.value,  "actions/charging-start", body, 1, "", ""));
+}
+
+function setChargeModeScheduled() {
+		let body = {
+			"data": {
+				"type": "ChargeMode",
+				"attributes": {
+					"action": "schedule_mode"
+				}
+				}
+			}
+			console.log(kamereonPost(JWT.value,  "actions/charge-mode", body, 1, "", ""));
+}
+
+function setChargeModeNow() {
+		let body = {
+			"data": {
+				"type": "ChargeMode",
+				"attributes": {
+					"action": "always_charging"
+				}
+				}
+			}
+			console.log(kamereonPost(JWT.value,  "actions/charge-mode", body, 1, "", ""));
+}
+
+
+function refreshBatteryStatus() {
+// ok
+		let body = {
+				'data': {'type': 'RefreshBatteryStatus'}
+			}
+			console.log(kamereonPost(JWT.value,  "actions/refresh-battery-status", body, "", 1, ""));
+}
+
+
+function getAdvancedBatteryStatus() {
+// ok, dati avanzati
+			console.log(kamereonGet(JWT.value,  "battery-status", 2));
+}
+
+
+function getAdvancedHvacStatus() {
+// 404
+			console.log(kamereonGet(JWT.value,  "hvac-status", 1));
+			console.log(kamereonGet(JWT.value,  "hvac-status", 2));
+			console.log(kamereonPost(JWT.value,  "hvac-status", null, 1, "", ""));
+			console.log(kamereonPost(JWT.value,  "hvac-status", null, 2, "", ""));
+}
+
+function getDoorsStatus() {
+//errore
+		console.log(kamereonGet(JWT.value,  "lock-status",  1));
+		console.log(kamereonGet(JWT.value,  "lock-status",  2));
+			console.log(kamereonPost(JWT.value,  "lock-status", null, 1, "", ""));
+			console.log(kamereonPost(JWT.value,  "lock-status", null, 2, "", ""));
+}
+
+
+function refreshDoorsStatus() {
+// errore
+		let body = {
+			"data": {
+					"type": "RefreshLockStatus"
+				}
+		};
+		console.log(kamereonPost(JWT.value,  "actions/refresh-lock-status", body, 1, "", ""));
+}
+
+
+
+
+
+function horns() {
+//		 target  ('horn_lights', 'lights', 'horn')
+//		 action  ('stop', 'start', 'double_start')
+
+		attributes = {
+			"action": "start",
+			"duration": 10,
+			"target": "lights",
+		};
+		let body = {
+			"data": {
+					"type": "HornLights",
+		  			"attributes": attributes
+				}
+		};
+		console.log(kamereonPost(JWT.value,  "actions/horn-lights", body, 1, "", ""));
+}
+
+
+
+
+function cockpit() {
+// ok, uguale a quell'altro
+		console.log(kamereonGet(JWT.value,  "cockpit",  2));
+}
+
+function test1() {
+
+		console.log(kamereonGet(JWT.value,  "location",  2));
+}
+
+
+function test2() {
+
+		console.log(kamereonGet(JWT.value,  "hvac-status",  2));
+}
+
+
+function test3() {
+
+		console.log(kamereonGet(JWT.value,  "hvac-status",  2));
+}
+
+
+function test4() {
+
+		console.log(kamereonGet(JWT.value,  "hvac-settings",  2));
+}
+
+
+
+function test5() {
+
+		console.log(kamereonGet(JWT.value,  "hvac-history",  2));
+}
+
+
+function test6() {
+			console.log(kamereonGet(JWT.value,  "hvac-schedule", 2));
+}
+
+function test7() {
+let body =  {
+				'type': 0,
+				'start': "2021-09-27T19:43:03.123456Z",
+				'end': "2021-09-27T19:43:03.123456Z"
+			};
+			console.log(kamereonGet(JWT.value,  "hvac-history", body,2));
+}
+
+
+
+
+</script>
+
+  </head>
+  <body onload="loadEndpoints()">
+<br>
+<center><b>MyRenault vehicle dashboard</b><br>
+Created by <a href="https://autoguida.wordpress.com">Jumpjack</a><br>
+Version 1.5.0 - 06/10/2021</center><br>
+<br>
+<br>
+mail:<input type="text" id="username" name="username" value=""><br>
+password:<input type="password" id="password" name="password" value=""><br>
+country:<input type="text" id="country" name="country" value="IT"><br>
+endpoint:<input type="text" id="endpoint" name="endpoint" value="actions/hvac-start" size=40><button id="btnSend" name="btnSend" onclick="main()">Login</button><br>
+<button id="btnSend2" name="btnSend2" onclick="justQuery()">Query</button><br>
+Time remaining to new login:<span id="countdown" name="countdown">-</span><br>
+<br>
+	After clikcing on "login" above, click on one of the known endpoints (see <a href="https://renault-api.readthedocs.io/en/stable/endpoints.html#vehicle-data-endpoints">guide</a>), or write your own: <br>
+	<span id="endpoints" name="endpoints"></span><br>
+<br>
+	Output:<br>
+	<span><textarea id="output" name="output" value="output" cols=60 rows=25></textarea><span>
+	<span><textarea id="log" name="log" value="" cols=60 rows=25></textarea><span>
+	<br>
+	400: Syntax error <br>
+	401: Unauthorized<br>
+	403: Command accepted by server, but forbidden to excute<br>
+	404: Command does not exist<br>
+	500: Internal Server Error<br>
+	501: Not Implemented<br>
+	502 Invalid response from the upstream server<br>
+ 	503: Service Unavailable<br>
+	<br>
+
+
+	====================== FOR DEVELOPERS ===================<br>
+<br>
+Endpoint:<br>
+<input type="text" id="actionEndpoint" name="Header payload f"value="actions/hvac-start"><br>
+<button onclick="getWithVersion(1)">GET v.1</button><button onclick="getWithVersion(2)">GET v.2</button><br>
+<button onclick="postWithVersion(1)">POST v.1</button><button onclick="postWithVersion(2)">POST v.2</button><br>
+<br>
+Header payload:
+<pre><textarea name="actionPayloadSpan" id="actionPayloadSpan" cols=120 rows=40>
+{"data":{"type":"HvacStart","attributes":{"action":"start","targetTemperature":"21"}}}
+</textarea>
+</pre><br>
+<br><br>
+	<button onclick="refreshHVACStatus()">Get HVAC id</button><input id="HVACid" name="HVACid" value="------" size="50"><br>
+	<button onclick="HVAC_on(19, document.getElementById('hvacStartDate').value)">Turn on HVAC</button>
+	<input id="hvacStartDate" name="hvacStartDate" value="2021-10-04T13:38:00Z"><br>
+	<button onclick="HVAC_setTemp()">Setup HVAC temperature</button>
+	<input id="HVACtemp" name="HVACtemp" value=20><br>
+	<button onclick="HVAC_off()">Turn off HVAC</button><br>
+<br>
+	<button onclick="chargeStart()">Start charging</button><br>
+	<button onclick="chargeStop()">Stop charging</button><br>
+	<button onclick="setChargeModeScheduled()">Set charge mode = scheduled</button><br>
+	<button onclick="setChargeModeNow()">Set charge mode = now</button><br>
+	<!--<button onclick="setChargeSchedule()">Setup charge schedule</button><br>-->
+<br>
+	<button onclick="getAdvancedBatteryStatus()">Get advanced battery status</button><br>
+<button onclick="sendManualUrl()">Send this url:</button><br>
+<textarea id="manualUrl" name="manualUrl" cols=100 rows=5></textarea><br>
+
+<br>
+<a href="https://renault-wrd-prod-1-euw1-myrapp-one.s3-eu-west-1.amazonaws.com/configuration/android/config_it_IT.json">Gigya apikey e Kamereon Apikey - credentials file</a>
+<br>
+
+Gigya api key: <input type="text" id="gapikey" name="gapikey" size=100 value="3_js8th3jdmCWV86fKR3SXQWvXGKbHoWFv8NAgRbH7FnIBsi_XvCpN_rtLcI07uNuq"><br>
+Kamereon key: <input type="text" id="kapikey" name="kapikey" size=100  value="Ae9FDWugRxZQAGm3Sxgk7uJn6Q4CGEA2"><br>
+<br>
+cookieValue:    <input type="text" id="cookieValue" name="cookieValue" value=""  size = 100><br>
+Id_token (JWT): <input type="text" id="JWT" name="JWT" value="" size=100><br>
+Person Id:      <input type="text" id="personId" name="personId" value="" size = 50><br>
+1st account:    <input type="text" id="accountId" name="accountId" value="" size=100> - Type: <input type="text" id="accountIdType" name="accountIdType" value="" size=10> <br>
+2nd account:    <input type="text" id="accountId2" name="accountId2" value="" size=100> - Type: <input type="text" id="accountId2Type" name="accountId2Type" value="" size=10> <br>
+VIN:            <input type="text" id="MY_VIN" name="MY_VIN" value="-"><br>
+<hr>
+<br><b><big>Manual login and test</big></b><br>
+Copy this payload into <a href="www.reqbin.com">reqbin.com</a> to manually log in:<br>
+<span id="loginPayloadForReqbin" name="loginPayload">-</span><br>
+Try this link: <br>
+<span id="testUrlReqbin" name="testUrlReqbin">-</span><br>
+<br>
+
+	<span id="status" name="status">-</span><br>
+
+  </body>
+
+
+</html>
