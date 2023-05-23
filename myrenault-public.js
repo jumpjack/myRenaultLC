@@ -5,7 +5,7 @@ newData = {
 	"servers": {
         "wiredProd": { 
             "target": "https://api-wired-prod-1-euw1.wrd-aws.com",
-            "apikey": "Ae9FDWugRxZQAGm3Sxgk7uJn6Q4CGEA2" // Valid as of september 2021
+            "apikey": "YjkKtHmGfaceeuExUDKGxrLZGGvtVS0J" // Valid as of feb 2023
         },
          "gigyaProd": { 
             "target": "https://accounts.eu1.gigya.com",
@@ -14,8 +14,15 @@ newData = {
     },
 };
 
+TEMP_NAMES = [
+  "batteryTemperature",
+  "internalTemperature",
+  "globalTargetTemperature",
+  "externalTemperature" // where?!?
+];
+
 ///////
-data = {
+dataOld = {
 // Old data downloaded from https://renault-wrd-prod-1-euw1-myrapp-one.s3-eu-west-1.amazonaws.com/configuration/android/config_it_IT.json
 // NOTE: Kamereon key is obsolete: you must retrieve it from inside the smartphone app
 	"servers": {

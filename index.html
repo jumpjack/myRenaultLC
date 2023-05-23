@@ -6,13 +6,54 @@
   <title>Unofficial MyRenault dashboard for browsers</title>
 
 
-	<script src="myrenault-public.js?dummy=new"></script>
-	<script src="endpoints.js?dummy=new"></script>
-	<script src="errors.js?dummy=new"></script>
-	<script src="payloads.js?dummy=new"></script>
+	<script src="myrenault-public.js?t=<?=time()?> type="text/javascript""></script>
+	<script src="endpoints.js?t=<?=time()?> type="text/javascript""></script>
+	<script src="errors.js?t=<?=time()?> type="text/javascript""></script>
+	<script src="payloads.js?t=<?=time()?> type="text/javascript""></script>
 	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 
   <script>
+// 2.9.0 - 2023-05-23
+//  Updated kamereon api key
+//	Fixed bug of infinite loop for notifications monitoring
+//  Added list of available temperatures (to do: missing externalTemperature and temporary temperature for manual HVAC on)
+
+// 2.8.1 - 2022-06-18
+// Fixed some payloads
+// Improved notification management
+
+// 2.8.0 - 2022-04-29
+// Added support for notifications
+// Added SendNavigation payload
+
+
+// 2.7.1 - 2022-04-06
+// Fixed bug of bad error managment in manageOutput()
+// Added error management in showVehicleData()
+// Fixed bug of bad descriptions for charging status
+// Fixed bug of bad processing of char\ges/chargestatus
+// Added management of chargingStatus besides chargeStatus
+
+// 2.7.0 - 2022-03-28
+// Implemented CSV(TSV) output for /charges
+// Fixed bug of improper displaying of results partially filled by Renault servers
+// Added workaround for Renault bug of missing chargeSummaries field if no charges have been recorded
+
+
+// 2.6.0 - 2022-03-21
+// Implemented CSV(TSV) output for /charge-history
+
+
+ // 2.5.0 - 2022-03-16
+ // Updated api key to VAX7XYKGfa92yMvXculCkEFyfZbuM7Ss
+ // Improved error management
+ // Fixed bug of API keys not read from file  at startup and not copied to textareas for editing
+ // Added buttons to start/stop HVAC
+ // Added button to refresh location status
+ // Added /res-state endpoint (although I don't know what it is for)
+ // Added "engine stop" (although it does not work on Renault)
+ // Added multiple VINs support and vechile data
+
 
 // 2.4.0 Removed use of myp.php generic proxy, now using specific PHPO login performed by gigya-login.php
 // 2.3.0 Cleaned up code for login process
@@ -34,9 +75,11 @@
 // 1.0.1 Oscurato VIN in output
 // 1.0.0 Prima versione pubblica
 
+localRun = null;
 
 GIGYA_API_KEY = null;
 KAMEREON_KEY = null;
+DEFAULT_VIN = 1;
 
 JWTextracted = null;
 countdownStarted = false;
@@ -52,7 +95,12 @@ endpointResponseTemplate =  endpointsList.filter(vals=>vals.name === "battery-st
 allowedPlugValues = endpointResponseTemplate.filter(vals=>vals.name === "plugStatus")[0].values; // Find element named "plugStatus"
 allowedChargingValues = endpointResponseTemplate.filter(vals=>vals.name === "chargingStatus")[0].values; // Find element named "chargingStatus"
 
-
+notificationId = "[empty]";
+notifRetry = 0;
+notifInterval = null;
+NOTIF_INT = 3000;
+NOTIF_MAX = 5;
+CommandCompleted = false;
 
 // To get data from an item undefinely nested inside an object:
 // https://stackoverflow.com/posts/43849204/timeline
@@ -60,17 +108,22 @@ const resolvePath = (object, path, defaultValue) => path
    .split('.')
    .reduce((o, p) => o ? o[p] : defaultValue, object)
 
+function readRunningMode() {
+	if (window.location.protocol === "file:") {
+		console.log("Running as local file!");
+		localRun = true;
+	}  else {
+		localRun = false;
+	}
+}
 
 function init() {
-	gigyaurl = data.servers.gigyaProd.target;
+	gigyaurl = newData.servers.gigyaProd.target;
 	GIGYA_API_KEY= newData.servers.gigyaProd.apikey;
-	kamereonurl = data.servers.wiredProd.target;
-	KAMEREON_KEY = newData.servers.wiredProd.apikey;
+	gapikey.value = GIGYA_API_KEY;
+	kamereonurl = newData.servers.wiredProd.target;
+	kapikey.value = newData.servers.wiredProd.apikey; // Read from file, write to interface, which is editable by user
 	GIGYA_PHP_LOGIN = gigyaPhpLogin.value;
-/*	PROXY_SCRIPT = proxyScript.value;
-	PROXY_PARAMETERS= proxyParams.value;
-	PROXY_STRING = PROXY_SCRIPT + PROXY_PARAMETERS;
-*/
 }
 
 function createJSrefreshLinks() {
@@ -90,9 +143,9 @@ function createJSrefreshLinks() {
 
 function fillPayload() {
 console.log("Funziona o no?");
-    actionPayloadSpan.value = JSON.stringify(samplePayloads[payloadsList.selectedIndex].pldContents, null, 4);
-    actionEndpoint.value = "actions/" + samplePayloads[payloadsList.selectedIndex].associatedAction;
-    payloadTested.innerHTML = samplePayloads[payloadsList.selectedIndex].testedOk;
+	actionPayloadSpan.value = JSON.stringify(samplePayloads[payloadsList.selectedIndex].pldContents, null, 4);
+	actionEndpoint.value = "actions/" + samplePayloads[payloadsList.selectedIndex].associatedAction;
+	payloadTested.innerHTML = samplePayloads[payloadsList.selectedIndex].testedOk;
 }
 
 
@@ -109,8 +162,8 @@ function loadPayloads() {
 
 function fillEndPoint() {
 	endpoint.value = endpointsList[EP_list.selectedIndex].url;
-    endpointDescription.innerHTML = endpointsList[EP_list.selectedIndex].description;
-    actionPayloadSpan.value = JSON.stringify(endpointsList[EP_list.selectedIndex].payload,null,4);
+	endpointDescription.innerHTML = endpointsList[EP_list.selectedIndex].description;
+	actionPayloadSpan.value = JSON.stringify(endpointsList[EP_list.selectedIndex].payload,null,4);
 }
 
 
@@ -202,7 +255,7 @@ console.log("REQ - payload ricevuto: '" , payload , "'");
 		xhr.send(payload);
 		console.log("REQ - With payload, type: ", requestType);
 	} else {
-        xhr.send();
+		xhr.send();
 		console.log("REQ - Without payload, type: ", requestType);
 	}
 
@@ -259,69 +312,18 @@ console.log("finalQueryUrl ", queryUrl);
 }
 
 
-
-function mainold() {
-	output.value = "";
-  	log.value = "Logging in...\n";
-	cookieValue.value="waiting...";
-	JWT.value = "waiting...";
-	personId.value = "waiting...";
-	accountId.value = "waiting...";
-	accountId2.value = "waiting...";
-	
-	init();
-	login1.innerHTML = "-";
-	login2.innerHTML = "-";
-	login3.innerHTML = "-";
-	login4.innerHTML = "-";
-	login5.innerHTML = "-";
-	login6.innerHTML = " logging in...";
-
-	loginUrl =  gigyaurl + "/accounts.login?loginID=" + username.value + "&password=" + password.value + "&apikey=" + GIGYA_API_KEY;
-	if (PROXY_STRING !== "") {
-		finalLoginURL =  PROXY_STRING + encodeURIComponent(loginUrl);
-	} else {
-		finalLoginURL = loginUrl;
-	}
-
-console.log("LOGIN URL: ", finalLoginURL);
-// VERSIONE CON AXIOS:
-return axios.post(
-		finalLoginURL,
-		null, // No payload required for login
-		{	headers: {'apikey': KAMEREON_KEY}	}
-	)
-	.then(response => {
-console.log("POST result for Renault login:", response);
-		//output.value = "\nPOST result  for lOGIN:\n" + (JSON.stringify(response.data, null, 4));
-		debugCheck = response;
-
-		//////////////////////////
-		checkRenaultLoginResult(response); // Only if check is successful the function calls next functions to retrieve JWT, Person, Account, VIN
-		//////////////////////////
-
-	})
-	.catch(
-		function (error) {
-			log.value += "\nERROR for LOGIN:\n" + error + "\n";
-			console.log("ERROR for LOGIN:\n" , error);
-			login1.innerHTML = "ERR_LOGIN";
-			return { status : "error", data : error };
-		}
-	);
-}
-
-
 function main() {
 	output.value = "";
-  	log.value = "Logging in...\n";
+	log.value = "Logging in...\n";
 	cookieValue.value="waiting...";
 	JWT.value = "waiting...";
 	personId.value = "waiting...";
 	accountId.value = "waiting...";
 	accountId2.value = "waiting...";
+console.log("Loading apikey:" , kapikey.value);
+  KAMEREON_KEY = kapikey.value; // get final value from interface
 
-	init();
+//	init(); // Called at page first loading
 	login1.innerHTML = "-";
 	login2.innerHTML = "-";
 	login3.innerHTML = "-";
@@ -329,33 +331,100 @@ function main() {
 	login5.innerHTML = "-";
 	login6.innerHTML = " logging in...";
 
+/// debug
 
-return axios.post(
+//	if (!localRun) {
+		// Running on the web, no PHP/CORS required ---> invece sì...
+
+/*		  onlineLoginHeader =  {
+			'ApiKey' : GIGYA_API_KEY,
+			'loginId' : username.value,
+			'password' : password.value,
+			'include' : 'data',
+			'sessionExpiration' : 60
+		  };
+
+			onlineLoginURL = gigyaurl + "/accounts.login";
+
+
+		return axios.post(
+			onlineLoginURL,
+			null,
+			{
+				headers: onlineLoginHeader
+	   		})
+			.then(response => {
+				if (response.data != "") {
+					return { status: "ok", data: "Login ok" };
+				} else {
+					console.log("ERROR: Invalid login response.");
+					log.value += "\nERROR: Invalid login response.\n";
+					return { status: "err", data: "Invalid login response" };
+				}
+			})
+			.catch(
+			  function (error) {
+				log.value += "\nERROR online001 for POST while logging in, please see console for details:" + JSON.stringify(error,null,4);
+				console.log("ERROR online001 for POST while logging in:\n",  error);
+				login2.innerHTML = "ERR_OLOG1";
+				console.log("POST ERROR OLOG001:" , error)
+				return { status : "error", data: "POST ERROR OLOG001:" + error };
+			  }
+			);
+
+*/
+
+
+//	} else {
+		// local login
+	console.log("Logging in from local PC");
+
+return axios.get(
 		GIGYA_PHP_LOGIN + '?gigyakey=' + GIGYA_API_KEY + '&gigyasite=' + gigyaurl +  '&username=' + username.value + '&password=' + password.value + '&kamereon=Ae9FDWugRxZQAGm3Sxgk7uJn6Q4CGEA2',
 		null, // No payload required for login
 		{	headers: null	}
 	)
 	.then(response => {
 console.log("POST result for my login:", response);
-		//output.value = "\nPOST result  for lOGIN:\n" + (JSON.stringify(response.data, null, 4));
+	//	output.value = "\nPOST result  for lOGIN:\n" + (JSON.stringify(response.data, null, 4));
 		debugCheck = response;
 
 		//////////////////////////
-		//checkRenaultLoginResult(response); // Only if check is successful the function calls next functions to retrieve JWT, Person, Account, VIN
+		 if (checkRenaultLoginResult(response).status != "ok") return -1; // Only if check is successful the function calls next functions to retrieve JWT, Person, Account, VIN
 		//////////////////////////
 		cookieValue.value = response.data.loginData.cookie;
 		JWT.value = response.data.loginData.JWT;
 		personId.value = response.data.loginData.personId;
 		getAccountId();
 	})
-	.catch(
-		function (error) {
-			log.value += "\nERROR for MAIN:\n" + error + "\n";
-			console.log("ERROR for MAIN:\n" , error);
-			login1.innerHTML = "ERR_LOGIN";
-			return { status : "error", data : error };
-		}
-	);
+		.catch(function (error) {
+			if (error.response) {
+			  // The request was made and the server responded with a status code
+			  // that falls out of the range of 2xx
+				console.log(error.response.data);
+				console.log(error.response.status);
+				console.log(error.response.headers);
+				log.value += "\nERROR MAIN (RESPONSE) for POST while logging to Gigya:\n" + error.response.data.error + ", " + error.response.data.error_description + "\n";
+				console.log("ERROR MAIN (RESPONSE)  for POST while logging to Gigya:\n" , error);
+				login4.innerHTML = "ERR_MAINresponse";
+			} else if (error.request) {
+			  // The request was made but no response was received
+			  // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+			  // http.ClientRequest in node.js
+				console.log(error.request);
+				log.value += "\nERROR MAIN (REQUEST) for POST while logging to Gigya:\n" + error.request+ "\n";
+				console.log("ERROR MAIN (REQUEST)  for POST while logging to Gigya:\n" , error);
+				login4.innerHTML = "ERR_MAINrequest";
+			} else {
+			  // Something happened in setting up the request that triggered an Error
+			  console.log('Error', error.message);
+				log.value += "\nERROR MAIN (CONFIG) for POST while logging to Gigya:\n" + error.message+ "\n";
+				console.log("ERROR MAIN (CONFIG)  for POST while logging to Gigya:\n" , error);
+				login4.innerHTML = "ERR_MAINconfig";
+			}
+			console.log(error.config);
+		  });
+	//}
 
 }
 
@@ -364,10 +433,18 @@ function checkRenaultLoginResult(loginResponse) {
 	log.value += "Checking Renault login results...\n";
 	console.log("Checking Renault login results...",loginResponse);
 
+	if( (typeof loginResponse.data === "object") && (loginResponse.data !== null) ) {
+		// already object--> created by my PHP page
+		if (loginResponse.data.loginData !== null) return {status : "ok", data : "Login ok, cookie received"};
+	} else {
+		// convert to objject for processing
+		 loginResponse.data = JSON.stringify(loginResponse.data);
+	}
+
 	try {
 		if (loginResponse.data.errorCode === 400002) {
 			console.log("ERR 002 - Cannot retrieve Renault cookie, missing login data:\n", loginResponse);
-			log.value += "ERR 002 - Cannot retrieve Renault cookie, missing login data:\n"+ loginResponse.errorDetails + "\n";
+			log.value += "ERR 002 - Cannot retrieve Renault cookie, missing login data:\n"+ loginResponse.data.errorDetails + "\n";
 			login1.innerHTML = "ERR-002";
 			return {status : "error 002", data : loginResponse};
 		}
@@ -375,15 +452,29 @@ function checkRenaultLoginResult(loginResponse) {
 
 		if (loginResponse.data.errorCode === 403042) {
 			console.log("ERR 042 - Cannot retrieve Renault cookie, invalid login data:\n", loginResponse);
-			log.value += "ERR 042 - Cannot retrieve Renault cookie, invalid login data:\n"+ loginResponse.errorDetails + "\n";
+			log.value += "ERR 042 - Cannot retrieve Renault cookie, invalid login data:\n"+ loginResponse.data.errorDetails + "\n";
 			login1.innerHTML = "ERR-042";
 			return {status : "error 042", data : loginResponse};
 		}
 
+		if (loginResponse.data.errorCode === 403120) {
+			console.log("ERR 120 - ", loginResponse.data.errorDetails);
+			log.value += "ERR 120 - " + loginResponse.data.errorDetails + "\n";
+			login1.innerHTML = "ERR-120";
+			return {status : "error 120", data : loginResponse};
+		}
+
 
 		if (loginResponse.data.errorCode != "0") {
-			console.log("ERR unknwon - Cannot retrieve Renault cookie, login failed:\n", loginResponse);
-			log.value += "ERR unknown - Cannot retrieve Renault cookie, login failed:\n"+ loginResponse + "\n";
+			console.log("ERR unknown - Cannot retrieve Renault cookie, login failed:\n", loginResponse);
+			if( (typeof loginResponse.data === "object") && (loginResponse.data !== null) ) {
+				toPrint = JSON.stringify(loginResponse.data,null,4);
+				fullError = "ERR unknown - Cannot retrieve Renault cookie, login failed:\n"+ toPrint + "\n"
+			} else {
+				toPrint = loginResponse.data;
+				fullError = "ERR possible wrong password - Cannot retrieve Renault cookie, login failed:\n"+ toPrint + "\n"
+			}
+			log.value += fullError;
 			login1.innerHTML = "ERR-UNK";
 			return {status : "error unknown", data : loginResponse};
 
@@ -396,12 +487,7 @@ function checkRenaultLoginResult(loginResponse) {
 		cookieValue.value = loginResponse.data.sessionInfo.cookieValue;
 		renaultUID = loginResponse.data.UID; // needed for Axios calls?
 
-		// Renault cookie retrieved; next step: get JWT token:
-	//////////////////////////
-		getJWTtoken();
-	//////////////////////////
-
-		return {status : "ok", data : "Retrieving JWT..."};
+		return {status : "ok", data : "Login ok, cookie received"};
 	} catch (error) {
 		console.log("ERR 112 - Cannot retrieve Renault cookie, error during login:\n", error,loginResponse);
 		log.value += "ERR 112 - Cannot retrieve Renault cookie,  error during login:\n";
@@ -423,7 +509,7 @@ function getJWTtoken() {
 	JWTheaders = {
 		'login_token': cookieValue.value,
 		'apikey': KAMEREON_KEY,
-	    'fields' : 'data.personId,data.gigyaDataCenter',
+		'fields' : 'data.personId,data.gigyaDataCenter',
 		'expiration': 87000
 	};
 
@@ -447,17 +533,17 @@ console.log("====JWT");
 	   		})
 			.then(response => {
  				//output.value = "\nPOST result:\n" + (JSON.stringify(response.data, null, 4));
-                //console.log("response.id: "+ response.data.id_token);
+				//console.log("response.id: "+ response.data.id_token);
 				debugCheck = response;
 				if (checkJWT(response.data).status.toUpperCase() === "OK") {; // Not async, just extract JWT string from response, hence not blocking.
 //////////////////////
-	                getPersonId(); // Async function: can proceed to next step (getAccountId) only after receiving response.
+					getPersonId(); // Async function: can proceed to next step (getAccountId) only after receiving response.
 //////////////////////
 					return { status: "ok", data: "Retrieving person id..." };
 				} else {
 					console.log("ERROR: Invalid JWT response.");
 					log.value += "\nERROR: Invalid JWT response.\n";
-                    return { status: "err", data: "Invalid JWT response" };
+					return { status: "err", data: "Invalid JWT response" };
 				}
 			})
 			.catch(
@@ -503,8 +589,8 @@ console.log("====personId");
 			.then(response => {
  				//console.log("POST result for Person:" + (JSON.stringify(response.data, null, 4)));
  				//output.value = "\nPOST result for Person:\n" + (JSON.stringify(response.data, null, 4));
-                console.log("response.id: "+ response.data.data.personId);
-                personIdResult = checkPersonId(response);
+				console.log("response.id: "+ response.data.data.personId);
+				personIdResult = checkPersonId(response);
 				if (personIdResult.status.toUpperCase() == "OK") {
 /////////////////////////////////
 					getAccountId(); // After receiving personId, proceed with getAccountId
@@ -534,18 +620,11 @@ console.log("====accountId");
 	"?apikey=" + KAMEREON_KEY +
 	"&country=" + country.value;
 
-// Kemereon server has no CORS restrictions
-/*	if (PROXY_STRING !== "") {
-		finalAccounturl =  PROXY_STRING + encodeURIComponent(accountUrl);
-	} else {
-		finalAccounturl = accountUrl;
-	}
-*/
 console.log("URL PER ACCOUNT: " + accountUrl);
 
 	accountHeaders = {
 		'apikey': KAMEREON_KEY,
-        'x-gigya-id_token' :  JWT.value
+		'x-gigya-id_token' :  JWT.value
 	};
 
 // VERSIONE CON AXIOS:
@@ -556,21 +635,41 @@ console.log("URL PER ACCOUNT: " + accountUrl);
 			}
 		)
 		.then(response => {
+console.log("Account response received, processing...");
 			accountIdExtractionResut = extractAccountId(response.data); // Not blocking, just extracting string from response.
+console.log("Account response processed:", accountIdExtractionResut);
 ///////////////////////////////
 			getVINs(accountIdExtractionResut); //After retrieving accountId, proceed wirh getVin
 ///////////////////////////////
 			return {status: "ok", data : "Account retrieved, retrieving VIN..."};
 		})
-		.catch( response => {
-		  function pippo (error,response) {
-			log.value += "\nERROR 002b for POST while getting accountId:\n" + error + "\n";
-			console.log("ERROR 002b for POST while getting accountId:\n", error, response);
-			login4.innerHTML = "ERR_POST2";
-	        return ({ status: "POST ERROR 002b", data: response.data });
-		  }
-		  }
-		);
+		.catch(function (error) {
+			if (error.response) {
+			  // The request was made and the server responded with a status code
+			  // that falls out of the range of 2xx
+				console.log(error.response.data);
+				console.log(error.response.status);
+				console.log(error.response.headers);
+				log.value += "\nERROR 002b (RESPONSE) for POST while getting accountId:\n" + error.response.data.error + ", " + error.response.data.error_description + "\n";
+				console.log("ERROR 002b (RESPONSE)  for POST while getting accountId:\n" , error);
+				login4.innerHTML = "ERR_POST2";
+			} else if (error.request) {
+			  // The request was made but no response was received
+			  // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+			  // http.ClientRequest in node.js
+				console.log(error.request);
+				log.value += "\nERROR 002c (REQUEST) for POST while getting accountId:\n" + error.request+ "\n";
+				console.log("ERROR 002c (REQUEST)  for POST while getting accountId:\n" , error);
+				login4.innerHTML = "ERR_POST2c";
+			} else {
+			  // Something happened in setting up the request that triggered an Error
+			  console.log('Error', error.message);
+				log.value += "\nERROR 002d (CONFIG) for POST while getting accountId:\n" + error.message+ "\n";
+				console.log("ERROR 002d (CONFIG)  for POST while getting accountId:\n" , error);
+				login4.innerHTML = "ERR_POST2c";
+			}
+			console.log(error.config);
+		  });
 }
 
 
@@ -594,18 +693,12 @@ console.log("=== VIN");
 		"/vehicles" +
 		"?apikey=" + KAMEREON_KEY +
 		"&country=" + country.value;
-// Kemereon server has no CORS restrictions
-/*	if (PROXY_STRING !== "") {
-		finalVehiclesListQueryUrl =  PROXY_STRING + encodeURIComponent(vehiclesListQueryUrl);
-	} else {
-		finalVehiclesListQueryUrl = vehiclesListQueryUrl;
-	}
-*/
+
 console.log("vehiclesListQueryUrl ", vehiclesListQueryUrl);
 
 	accountHeaders = {
 		'apikey': KAMEREON_KEY,
-        'x-gigya-id_token' :  JWT.value
+		'x-gigya-id_token' :  JWT.value
 	};
 
 // VERSIONE CON AXIOS:
@@ -616,9 +709,9 @@ console.log("vehiclesListQueryUrl ", vehiclesListQueryUrl);
 			}
 		)
 		.then(response => {
-			//console.log("POST result for VIN:" + (JSON.stringify(response.data, null, 4)));
-			//output.value = "\nPOST result for VIN:\n" + (JSON.stringify(response.data, null, 4));
-			console.log("response VIN: ", response);
+			console.log("POST result for VIN:" + (JSON.stringify(response.data, null, 4)));
+			output.value = "\nPOST result for VIN:\n" + (JSON.stringify(response.data, null, 4));
+			//console.log("response VIN: ", response);
 			checkVIN(response.data);
 		})
 		.catch(
@@ -659,8 +752,8 @@ console.log("finalQueryUrl ", queryUrl);
 
 	queryHeaders = {
 		'apikey': KAMEREON_KEY,
-        'x-gigya-id_token' :  JWT.value,
-        'Content-type'  : 'application/vnd.api+json'
+		'x-gigya-id_token' :  JWT.value,
+		'Content-type'  : 'application/vnd.api+json'
 		//'expiration': 87000
 	};
 
@@ -677,22 +770,22 @@ console.log("finalQueryUrl ", queryUrl);
 			.then(response => {
  				console.log("Axios POST result for vehicle data:" + (JSON.stringify(response.data, null, 4)));
  				output.value = "\nAxios POST result for vechile data:\n" + (JSON.stringify(response.data, null, 4));
-                console.log("response: ", response);
+				console.log("response: ", response);
 				return ({ status: "OK", data: response });
 			})
 			.catch((error) => {
-			      if (error.response) {
-			        console.log(error.response);
+				  if (error.response) {
+					console.log(error.response);
 					wholeError = error.response;
-                    errorMessage = wholeError.data.errors[0].errorMessage;
-                    cleanedErrorMessage = errorMessage.split(slash).join(empty);
-                    JSONerrorMessage = JSON.parse(cleanedErrorMessage);
+					errorMessage = wholeError.data.errors[0].errorMessage;
+					cleanedErrorMessage = errorMessage.split(slash).join(empty);
+					JSONerrorMessage = JSON.parse(cleanedErrorMessage);
 					console.log(">>>> getVehicleData - Final error:", JSONerrorMessage);
 					output.value = JSON.stringify(JSONerrorMessage, null, 4);
 					console.log("QUERY FINISHED");
 					return ({ status: "VIN ERROR", data: response });
-			      }
-			    }
+				  }
+				}
 
 			);
 }
@@ -770,7 +863,7 @@ function extractAccountId(accountIdResponse) {
 		console.log("ERR unknwon - No accounts found in response:\n", accountIdResponse);
 		log.value += "ERR unknown - No accounts found in response:\n" +  JSON.stringify(accountIdResponse, null, 4);
 		login4.innerHTML = "JSON_ERR";
-        
+
 		return ({ status: "error", data: accountIdResponse });
 	}
 
@@ -792,6 +885,79 @@ function extractAccountId(accountIdResponse) {
 
 }
 
+function showVehicleData(index) {
+	data = globalVehicles[index];
+	try {
+		data = globalVehicles[index];
+
+		try {
+			details = data.vehicleDetails;
+		} catch (err) {
+			details = "n/a";
+		}
+
+
+		try {
+			brand = data.brand;
+		} catch (err) {
+			brand = "n/a";
+		}
+
+
+		try {
+			model = details.model.label;
+		} catch (err) {
+			model = "n/a";
+		}
+
+
+		try {
+			regNum = details.registrationNumber;
+		} catch (err) {
+			regNum = "n/a";
+		}
+
+
+		try {
+			regDate = details.registrationDate;
+		} catch (err) {
+			regDate = "n/a";
+		}
+
+		try {
+			engType = details.engineType;
+		} catch (err) {
+			engType = "n/a";
+		}
+
+		try {
+			engRatio = details.engineRatio;
+		} catch (err) {
+			engRatio = "n/a";
+		}
+
+		try {
+			batLabel =  details.battery.label;
+		} catch (err) {
+			batLabel = "n/a";
+		}
+
+		try {
+			owner = data.linkType;
+		} catch (err) {
+			owner = "n/a";
+		}
+
+		vehicleDetails.innerHTML = brand + " " + model + ', '  + regNum + " (" +   regDate + ") , engine type: " + engType  +
+		", engine ratio: " + engRatio + ', Battery: ' + batLabel + ", Ownership:"  + owner;
+	} catch (err) {
+		data = "no data available";
+		vehicleDetails.innerHTML = data;
+	}
+
+
+
+}
 
 
 function checkVIN(VINResponse) {
@@ -808,8 +974,18 @@ function checkVIN(VINResponse) {
 		return ({ status: "error in VIN extraction, no vehicles array", data: VINResponse });
 	}
 
+	for (var vins=0; vins < VINResponse.vehicleLinks.length; vins++) {
+		opt = document.createElement("option");
+		opt.innerHTML = VINResponse.vehicleLinks[vins].vin;
+		document.getElementById("lstVIN").appendChild(opt);
+	}
+
 	try {
-		MY_VIN.value = VINResponse.vehicleLinks[0].vin;
+		MY_VIN.value = VINResponse.vehicleLinks[DEFAULT_VIN].vin;
+		document.getElementById("lstVIN").innerHTML = "";
+console.log(VINResponse.vehicleLinks);
+		globalVehicles = VINResponse.vehicleLinks;
+		showVehicleData(0);
 		login5.innerHTML = "OK";
 		loginTime = new Date();
 		loginString = loginTime.getHours() + ":" + loginTime.getMinutes();
@@ -835,12 +1011,45 @@ function checkVIN(VINResponse) {
 		output.value = "\nLogin successful, click on 'download data' button to retrieve data.\n";
 ////////////////// ///////////////////////  //////////////////
 
-	} catch {
-		console.log("JSON error 2 - Cannot extract VIN from response:\n", VINResponse);
-		log.value += "\nJSON error 2 - Cannot extract VIN from response:\n" +  JSON.stringify(VINResponse, null, 4);
-		login5.innerHTML = "JSON_ERR2";
-		login6.innerHTML = "<b>LOGIN FAILED<b>";
-		return ({ status: "VIN_ERR3", data: VINResponse });
+	} catch (err) {
+		console.log("JSON error 2 - Cannot extract default VIN from response:\n", "VIN;" , DEFAULT_VIN, VINResponse,err);
+		log.value += "\nJSON error 2 - Cannot extract default VIN from response:\n" +  JSON.stringify(VINResponse, null, 4);
+		login5.innerHTML = "JSON_ERR2 (VIN)";
+		login6.innerHTML = "<b>LOGIN FAILED (MISSING DEFAULT VIN)<b>";
+    try {
+  		MY_VIN.value = VINResponse.vehicleLinks[0].vin;
+  		document.getElementById("lstVIN").innerHTML = "";
+console.log(VINResponse.vehicleLinks);
+  		globalVehicles = VINResponse.vehicleLinks;
+  		showVehicleData(0);
+  		login5.innerHTML = "OK";
+  		loginTime = new Date();
+  		loginString = loginTime.getHours() + ":" + loginTime.getMinutes();
+  		login6.innerHTML = "<b>Successfully logged in at " + loginString + "</b>";
+  		startCountdown();
+
+  		var testlink = kamereonurl + "/commerce/v1/accounts/" +
+  			accountId.value +
+  			"/kamereon/kca/car-adapter/v1/cars/" + MY_VIN.value +
+  			"/" +
+  			"cockpit" +
+  			"?" +
+  			"apikey=" + KAMEREON_KEY +
+  			"&country=" + country.value;
+
+  		testUrlReqbin.innerHTML = "<a href='" + testlink + "'>" + testlink + "</a><br>" ;
+
+////////////////// LOGIN PROCESS COMPLETED //////////////////
+		console.log("VIN n.0 successfully extracted.");
+		console.log("=== LOGIN PROCESS SUCCESSFULLY COMPLETED ===.");
+		log.value += "VIN successfully extracted.\n";
+		log.value += "LOGIN COMPLETE.\n";
+		output.value = "\nLogin successful, click on 'download data' button to retrieve data.\n";
+////////////////// ///////////////////////  //////////////////
+
+    } catch (err) {
+		  return ({ status: "VIN_ERR3", data: VINResponse });
+    }
 	}
 }
 
@@ -880,7 +1089,7 @@ function personIdError(e) {
 	console.log(e);
 	log.value += "\nErrore in personId:" + e;
 	personId.value = "!!!!!!!!!!!! Person Id error";
-	
+
 	return ("Errore PersonId");
 }
 
@@ -938,21 +1147,56 @@ pippo = response.data;
 	console.log("Axios GET successful.", response);// for '" + path +  "' with version " + version + "':" + (JSON.stringify(response.data, null, 4)).replace(MY_VIN.value, "xxx MY VIN xxx"));
 	output.value = "\nAxios GET successful:\n" +  (JSON.stringify(response.data, null, 4)).replace(MY_VIN.value, "xxx MY VIN xxx");
 	selectedEndpoint  = endpointsList[EP_list.selectedIndex];
+
+	//// Manage renault bug: if no charges are recoreded for the period, chargeSummaries field is not empty: it does not exist.
+	if ((path.indexOf("charge-history")>=0) && (!response.data.chargeSummaries)) {
+		   tr = document.createElement("TR");
+
+			td1= document.createElement("TD");
+				td1.innerHTML = "charge-history";
+				tr.appendChild(td1);
+
+			td2= document.createElement("TD");
+				td2.innerHTML = "No charges recorded for selected period";
+				tr.appendChild(td2);
+
+			td3= document.createElement("TD");
+				strBegin = path.lastIndexOf("/")+1;
+				strtEnd = path.length;
+				strLength = strtEnd - strBegin +1;
+				td3.innerHTML = path.substr(strBegin,strLength); // endpoint without full path
+				tr.appendChild(td3);
+
+			td4 = document.createElement("TD");
+				td4.innerHTML = "";
+				tr.appendChild(td4);
+
+			finalResults.appendChild(tr);
+	}
+	///////////
+
+
 	for (const key in response.data) {
-	    console.log(`${key}: ${response.data[key]}`);
-        results[`${key}`] = `${response.data[key]}`;
+		console.log(`${key}: ${response.data[key]}`);
+		results[`${key}`] = `${response.data[key]}`;
 		stringToWrite = ("<tr><td>`${key}`</td><td>`${response.data[key]}`</td><td>" + path + "</td></tr>").toUpperCase();
 		currentTable = finalResults.innerHTML.toUpperCase();
 		fieldName =  `${key}`;
 		fieldValue =  `${response.data[key]}`;
+		rawFieldValue = null;
+
+//console.log("Processing field ' " + fieldName + "' = '" + fieldValue + "'");
+    writeTemperature(fieldName, fieldValue);
+
 		if (fieldValue.indexOf("object") >= 0 ) { // Specific processing in case parameter value is an bject (tipically schedules)
-			fieldValue = JSON.stringify(response.data, null, 4);
-            fieldValue = fieldValue.split(MY_VIN.value).join("xxxx");
-            //fieldValue = JSON.stringify(fieldValue, null, 4);
-            fieldValue = fieldValue.split("\\n").join("");
-            fieldValue = fieldValue.split('\\"').join('"');
-			fieldValue = "<textarea rows=2 cols=10>" + fieldValue + "</textarea>";
+			rawFieldValue = JSON.stringify(response.data, null, 4);
+			fieldValue = rawFieldValue.split(MY_VIN.value).join("xxxx");
+			//fieldValue = JSON.stringify(fieldValue, null, 4);
+			fieldValue = fieldValue.split("\\n").join("");
+			fieldValue = fieldValue.split('\\"').join('"');
+			fieldValue = "<textarea rows=5 cols=50>" + fieldValue + "</textarea>";
 		}
+
 		if ((currentTable.indexOf(stringToWrite) < 0 ) && ((`${key}`).toUpperCase() != "ID")){ // skip VIN and duplicated values
 		   tr = document.createElement("TR");
 console.log(">>>>>>>>>>>>>>>>" + (`${key}`).toUpperCase());
@@ -979,13 +1223,13 @@ console.log(">>>>>>>>>>>>>>>>" + (`${key}`).toUpperCase());
 					//
 				}
 
-				if ((fieldName.toUpperCase()).indexOf("CHARGINGSTATUS") >= 0) { // Extract text corresponding to chargingStatus value
+				if (((fieldName.toUpperCase()).indexOf("CHARGESTATUS") >= 0) || ((fieldName.toUpperCase()).indexOf("CHARGINGSTATUS") >= 0)) { // Extract text corresponding to chargingStatus value
 					try {
 						textValueObject = allowedChargingValues.filter(vals=>vals.number === fieldValue*1.0) ; // Find element corresponding to field value and get corresponding text
 						textValue = textValueObject[0].text;
 						dataComment = " (" + textValue + ")";
 						td2.innerHTML += dataComment;
-					} catch {
+					} catch (error) {
 						dataComment = " (description not found)";
 						td2.innerHTML +=  dataComment;
 						console.log("WARNING: cannot find text description for chargingStatus=" ,fieldValue, ":", error);
@@ -995,7 +1239,37 @@ console.log(">>>>>>>>>>>>>>>>" + (`${key}`).toUpperCase());
 					//
 				}
 
-                tr.appendChild(td2);
+
+				if (fieldName.toUpperCase().match(/^CHARGES$/)) {
+				//if ((fieldName.toUpperCase()).indexOf("CHARGES") >= 0) {
+					try {
+console.log("Processing CHARGES/CHARGESUMMARIES", rawFieldValue);
+						if (rawFieldValue) { // object does not exist if list is empty
+							if (JSON.parse(rawFieldValue).chargeSummaries) {
+								chargesList = JSON.parse(rawFieldValue).chargeSummaries;
+							} else {
+								chargesList = JSON.parse(rawFieldValue).charges;
+							}
+							chargesListCSV = objToCSV(chargesList);
+	console.log("MyResult=", objToCSV(chargesList));
+							td2.innerHTML = "<textarea rows=5 cols=50>" + chargesListCSV + "</textarea>";
+							dataComment = "";
+							td2.innerHTML += dataComment;
+						} else {
+							td2.innerHTML = "No charges recorded in selected period";
+						}
+					} catch {
+						dataComment = " (charges decoding error)";
+						td2.innerHTML +=  dataComment;
+						console.log("WARNING: cannot process CHARGES:", error);
+						log.value += "\n===WARNING: cannot process CHARGES\n";
+					}
+				} else {
+					//
+				}
+
+
+				tr.appendChild(td2);
 
 			td3= document.createElement("TD");
 				strBegin = path.lastIndexOf("/")+1;
@@ -1016,13 +1290,13 @@ console.log(">>>>>>>>>>>>>>>>" + (`${key}`).toUpperCase());
 }
 
 function manageErrors(error,debugPath) {
-    if (error.response) {
-      console.log(error.response);
+	if (error.response) {
+	  console.log(error.response);
 		wholeError = error.response;
-	    errorMessage = wholeError.data.errors[0].errorMessage;
-	    cleanedErrorMessage = errorMessage.split(slash).join(empty); 
+		errorMessage = wholeError.data.errors[0].errorMessage;
+		cleanedErrorMessage = errorMessage.split(slash).join(empty);
 		try {
-	    	JSONerrorMessage = JSON.parse(cleanedErrorMessage);
+			JSONerrorMessage = JSON.parse(cleanedErrorMessage);
 			console.log("Axios GET - Final error for endpoint '" + debugPath  + "' :", JSONerrorMessage);
 			output.value = "Axios GET - Final error for endpoint '" + debugPath  + "' :" + JSON.stringify(JSONerrorMessage, null, 4);
 			return ({"status" : "error", "errorText" : JSONerrorMessage , "JSONerror" : "cleanedErrorMessage"});
@@ -1031,7 +1305,7 @@ function manageErrors(error,debugPath) {
 			console.log("Axios POST - Final error for " + debugPath  + " :", cleanedErrorMessage);
 			output.value = "Error while decoding JSON error for endpoint " + debugPath + "; raw error message: \n" + cleanedErrorMessage + "\n";
 		}
-    } else { // no response field in error
+	} else { // no response field in error
 		console.log("Axios GET - Unknown error response for endpoint '" + debugPath  + "' :", error);
 		output.value = "Axios GET - Unknown error response for endpoint '" + debugPath  + "' , see console for details.";
 		return ({"status" : "error", "error" : error });
@@ -1039,10 +1313,215 @@ function manageErrors(error,debugPath) {
 }
 
 
+function writeTemperature(name,v) {
+  for (var i = 0; i < TEMP_NAMES.length; i++) {
+    if (name === TEMP_NAMES[i]) {
+      document.getElementById(name).innerHTML = v;
+    }
+  }
+}
+
+function manageNotification(type, endpointUrl, id) {
+console.log("------- Starting notification loop for id ", id, ", endpoint " , endpointUrl);
+	//https://api-wired-prod-1-euw1.wrd-aws.com/commerce/v1/persons/PERSONID/notifications/kmr?country=IT&notificationId=d47296c9-6ab6-4192-9db1-4712010538fb
+	notificationUrl = kamereonurl + "/commerce/v1/persons/" +
+	personId.value +
+	"/notifications/kmr" +
+	"?apikey=" + KAMEREON_KEY +
+	"&country=" + country.value;
+	if ((type === "last") || (type === "manual call")) {
+		notificationUrl +=	"&notificationId=" + notificationId;
+	} else {
+		// raw url provides info on all previous notifications
+	}
+
+	notificationHeaders = {
+		'apikey': KAMEREON_KEY,
+		'x-gigya-id_token' :  JWT.value
+	};
+	attemptsCount = 0;
+	endPointUrlGlobal = endpointUrl; // used to store hvac-start for further processing of notifications
+console.log("!!!!!!!!!!!!Setting interval!", notifInterval);
+	if (notifInterval === null) {
+		notifInterval = setInterval(getNotificationStatus, NOTIF_INT,"auto");
+	} else {
+console.log("!?!?!?!? Double call prevented");
+	}
+}
+
+function getNotificationStatusManual(notId) {
+	notificationId = notId;
+	manageNotification("manual call");
+}
+
+
+function getAllNotificationStatusManual() {
+	notificationId = "";
+	manageNotification("all");
+}
+
+
+
+function getNotificationStatus(mex) {
+	attemptsCount++;
+	console.log(">>>>>> Called by ",mex, ", attempt n. ", attemptsCount);
+	if (attemptsCount > NOTIF_MAX) { // after max number of attempts is reached, get status
+		clearInterval(notifInterval); // stop loop - debug: not working?!?
+		notifInterval = null;
+		attemptsCount = 0;
+console.log("Loop end.");
+		output.value += "Loop end."
+		if (endPointUrlGlobal.indexOf("hvac-start") >= 0 ) {
+	   kamereonGet(JWT.value, "hvac-status",  1);
+		}
+		return;
+	}
+
+	output.value += "\nAttempt n. " +  attemptsCount + ", please wait...\n";
+	axios.get(
+		notificationUrl,
+		{
+			headers: notificationHeaders
+		}
+	)
+	.then(response => {
+		pippo = response;
+		console.log("###RAW RESPONSE###", response);
+		console.log("###DETAILS:");
+		for (var i = 0; i < response.data.length; i++) {
+			datum = response.data[i];
+			result = "";
+			if (datum) {
+				result += datum.notifDate + ", " + datum.commandType + ", " + datum.actionType;
+				if (datum.commandResponse) {
+		  result += ", " + datum.commandResponse.status;
+				}
+				if (datum.srpResponse) {
+		  result += ", SRP status: " + datum.srpResponse.status
+					if (datum.srpResponse.errorCode) {
+			  result += ", SRP error: " + datum.srpResponse.errorCode
+					}
+					if (datum.srpResponse.errorCategory) {
+			  result += ", categoryId=" +  datum.srpResponse.errorCategory.categoryId + ", categoryType=" + datum.srpResponse.errorCategory.categoryType
+					}
+				}
+			}
+			console.log(i, result);
+	  output.value += result;
+		}
+	})
+	.catch(
+	  function (error) {
+		log.value += "\nERROR 005 for POST while managing notification n. " + notificationId + ":\n" + error + "\n";
+		console.log("ERROR 005 for POST while  managing notification n. " + notificationId + ":\n" + error);
+		console.log("POST ERROR 005:" ,error)
+	  	login1.innerHTML = "ERR_POST";
+		return ({ status: "POST ERROR 005 (Notifications)", data: response.data });
+		}
+	);
+}
+
+
+function convertToCSV(arr) {
+  const array = [Object.keys(arr[0])].concat(arr)
+
+  return array.map(it => {
+	return Object.values(it).toString()
+  }).join('\n').split(",").join("\t")
+}
+
+/*
+function arrayToCSV(objArray) {
+	 const array = typeof objArray !== 'object' ? JSON.parse(objArray) : objArray;
+	 let str = `${Object.keys(array[0]).map(value => `"${value}"`).join(",")}` + '\r\n';
+
+	 return array.reduce((str, next) => {
+		 str += `${Object.values(next).map(value => `"${value}"`).join(",")}` + '\r\n';
+		 return str;
+		}, str);
+ }
+*/
+
+function objToCSV(originalArray) {
+console.log("originalArray=",originalArray);
+	header = [];
+	result = [];
+	finalCSV = "";
+
+	originalArray.forEach(
+		a => { /// Parse all rows of input ///
+			row = []; // Create for each row of the input an empty row for the output
+			for (const [key, value] of Object.entries(a)) {  // Parse all elements of input row
+console.log(`${key}: ${value}`);
+				if (header.indexOf(`${key}`) < 0) {
+					header.push(`${key}`); // Add field to header if not already present
+				}
+				tempKey =  `${key}`;
+				tempVal = `${value}`;
+				row[tempKey] = tempVal;
+				//row[/*header.indexOf(*/`${key}`/*)*/]=`${value}`; // Put value in the right position in the array depending on field name
+			};
+			result.push(row); // Add finished line to output array
+console.log("--- row separator ---");
+		}
+	)
+
+console.log("Final header:", header);
+console.log("Initial array:", result);
+
+	// Prepare header of CSV file:
+	header.forEach(fieldName => {
+		finalCSV += fieldName + "\t";
+	}
+	);
+	finalCSV += "\n";
+
+	// Fix missing values in final array, according to final header:
+	//result.forEach(row => {
+for (var index = 0; index < result.length; index++) {
+		row = result[index];
+		newRow=[];
+console.log("Riga prima: ", row);
+		header.forEach(fieldName => {
+			if (row[fieldName]) {
+				newRow[header.indexOf(fieldName)] = row[fieldName];
+			} else {
+				row[fieldName] = ""; // Fill missing field with empty data
+				newRow[header.indexOf(fieldName)] = null;
+			}
+		}
+		);
+console.log("Riga dopo: ", row);
+	result[index] = newRow;
+	}
+	//);
+
+console.log("Array sistemato:", result);
+
+	// Add all rows to CSV file:
+	result.forEach(row => {
+		/// parse all rows of created array //
+		//for (var index=0; index < row.length; index++) { // Cannot use forEach, it skips empty columns!
+			//col = row[index];
+		row.forEach(col => {
+			/// parse all elements of row ///
+			finalCSV += col + "\t"; // Add element to output CSV row
+console.log("COL=",col);
+		}
+		);
+		finalCSV += "\n";
+console.log("-----end row-----");
+	}
+	);
+
+	return finalCSV;
+}
+
+
 function kamereonMultiGet(id_token) {
 	refreshHVACStatus();
 	refreshBatteryStatus();
-    finalResults.innerHTML = "";
+	finalResults.innerHTML = "";
 
 	var hd ={
 				headers: {
@@ -1069,21 +1548,24 @@ function kamereonMultiGet(id_token) {
 	const sendGetRequest = async () => {
 	for (var i = 0; i < lista.length; i++) {
 		path=lista[i];
-        fullUrl = baseUrl + lista[i] + "?country=IT";
+		fullUrl = baseUrl + lista[i] + "?country=IT";
 		log.value += lista[i] + "\n";
-	    try {
-	        myvar = await axios
+
+		debugPath = path;
+		try {
+			myvar = await axios
 			.get(fullUrl,hd)
 			.then(response => {
-				return manageOutput(response, path);
+				return manageOutput(response, debugPath);
 			})
-			.catch((error,path) => {
-				return manageErrors(error, path);
-         	});
-	    } catch (err) {
-	        console.error("ASYNC GET ERROR:", err);
-	    }
-        progress.innerHTML = (((i+1)/lista.length)*100).toFixed(0) + "%"
+			.catch(error => {
+console.log("####################",error,debugPath);
+				return manageErrors(error, debugPath);
+		 	});
+		} catch (err) {
+			console.error("ASYNC GET ERROR:", err);
+		}
+		progress.innerHTML = (((i+1)/lista.length)*100).toFixed(0) + "%"
 		if (i+1 == lista.length) {
 			log.value += "Done.\n";
 		}
@@ -1091,7 +1573,7 @@ function kamereonMultiGet(id_token) {
 console.log("results___=",results);
 	}; // Async sendGetRequest() definition
 
-    console.log("sendGetRequest=",sendGetRequest());
+	console.log("sendGetRequest=",sendGetRequest());
 	}
 
 
@@ -1120,25 +1602,27 @@ function kamereonGet(id_token, path, version) {
 					}
 				};
 
+		debugPath = path;
 
 		const sendGetRequest = async () => {
-		    try {
-		        myvar = await axios
+			try {
+				myvar = await axios
 				.get(fullUrl,hd)
 				.then(response => {
-					return manageOutput(response, path);
+console.log("kamereonGet success for endpoint " , debugPath);
+					return manageOutput(response, debugPath);
 				})
-				.catch((error,path) => {
-					debugPath = path;
-					return manageErrors(error);
-	         	});
-		    } catch (err) {
-		        console.error("ASYNC GET ERROR:", err);
-		    }
+				.catch(error => {
+console.log("!!!!kamereonGet FAIL for endpoint " , debugPath, error);
+					return manageErrors(error, debugPath);
+			 	});
+			} catch (err) {
+				console.error("ASYNC GET ERROR:", err);
+			}
 console.log("myvar=",myvar);
 		}; // Async sendGetRequest() definition
 
-    console.log("sendGetRequest=",sendGetRequest());
+	console.log("sendGetRequest=",sendGetRequest());
 	}
 
 
@@ -1159,6 +1643,8 @@ function kamereonPost(id_token, path, data, version, sourceField, destField) {
 
 console.log("====================POST URL: " + fullUrl);
 
+	debugPath = path;
+
 		return axios.post(
 			fullUrl,
 			data,
@@ -1171,9 +1657,16 @@ console.log("====================POST URL: " + fullUrl);
 				}
 	   		})
 			.then(response => {
- 				console.log("Axios POST result successful."); //  '" + path +  "' with version " + version + "':" + (JSON.stringify(response.data, null, 4)).replace(MY_VIN.value, "xxx MY VIN xxx"));
+ 				console.log("Axios POST result successful."); 
  				output.value = "\nAxios POST successful:\n" + (JSON.stringify(response.data, null, 4)).replace(MY_VIN.value, "xxx MY VIN xxx");
-                console.log("Source: "+ sourceField + " = '"+ resolvePath(response, sourceField) + "'");
+				output.value += "\nProcessing response...";
+				if (response.data.id) {
+					notificationId = response.data.id;
+				} else {
+					notificationId = "";
+				}
+				manageNotification("last",fullUrl, notificationId);
+				console.log("Source: "+ sourceField + " = '"+ resolvePath(response, sourceField) + "'");
 				if ((sourceField !== "") && (destField !== "")) {
 					// Update page with POST result data as requested:
 					document.getElementById(destField).value = resolvePath(response, sourceField);
@@ -1181,23 +1674,23 @@ console.log("====================POST URL: " + fullUrl);
 				return ({ status: "ok", data: response.id });
 			})
 			.catch((error) => {
-			      if (error.response) {
-			        console.log(error.response);
+				  if (error.response) {
+					console.log(error.response);
 					wholeError = error.response;
-                    errorMessage = wholeError.data.errors[0].errorMessage;
-                    cleanedErrorMessage = errorMessage.split(slash).join(empty);
+					errorMessage = wholeError.data.errors[0].errorMessage;
+					cleanedErrorMessage = errorMessage.split(slash).join(empty);
 					try {
-                    	JSONerrorMessage = JSON.parse(cleanedErrorMessage);
+						JSONerrorMessage = JSON.parse(cleanedErrorMessage);
 					} catch {
 						// Non JSON error response
-						console.log("Axios POST - Final error for " + path  + " :", cleanedErrorMessage);
+						console.log("Axios POST - Final error for " + debugPath  + " :", cleanedErrorMessage);
 						output.value = cleanedErrorMessage;
 					return;
 					}
-					console.log("Axios POST - Final error for " + path  + " :", JSONerrorMessage);
+					console.log("Axios POST - Final error for " + debugPath  + " :", JSONerrorMessage);
 					output.value = JSON.stringify(JSONerrorMessage, null, 4);
-			      }
-			    }
+				  }
+				}
 	);
 	}
 
@@ -1206,7 +1699,7 @@ console.log("====================POST URL: " + fullUrl);
 function getWithVersion(v) {
 	log.value ="";
 	output.value="";
-        kamereonGet(JWT.value, actionEndpoint.value, v)
+		kamereonGet(JWT.value, actionEndpoint.value, v)
 }
 
 
@@ -1219,9 +1712,8 @@ function postWithVersion(v) {
 		log.value = "JSON error parsing payload.\n";
 		return;
 	}
-    kamereonPost(JWT.value, actionEndpoint.value, body, v, "", "")
+	kamereonPost(JWT.value, actionEndpoint.value, body, v, "", "")
 }
-
 
 
 function refreshHVACStatus() {
@@ -1235,9 +1727,27 @@ function refreshHVACStatus() {
 		};
 		var HVACresult = kamereonPost(JWT.value,  "actions/refresh-hvac-status", body, 1, "data.id", "HVACid")
 		console.log("HVACresult prima =",HVACresult);
-  		return HVACresult.id
+		return HVACresult.id
 }
 
+
+function HVAC_on_now() {
+		let body = {
+			"data": {
+					"type": "HvacStart",
+					"id": HVACid.value,
+					"attributes": {
+							"action": "start",
+							"id": HVACid.value
+					}
+			}
+			};
+
+
+console.log(kamereonPost(JWT.value,  "actions/hvac-start", body, 1, "", ""));
+			HVACid.value="-";
+			//console.log(kamereonGet(JWT.value, "hvac-status", 1));
+}
 
 function HVAC_on(finalTemp, startDate) {
 console.log("Accendo id :",HVACid.value, " in data " , startDate , " a temperatura  " , finalTemp);
@@ -1265,7 +1775,7 @@ function HVAC_off() {
 			"data": {
 				"type": "HvacStart",
 				"attributes": {
-					"action": "stop"
+					"action": "cancel"
 				}
 			}
 		};
@@ -1297,13 +1807,13 @@ function chargeStart() {
 				}
 			}
 		}
-			console.log(kamereonPost(JWT.value,  "actions/charging-start", body, "", 1, ""));
+			console.log(kamereonPost(JWT.value,  "actions/charging-start", body, 1, "", ""));
 }
 
 function chargeStop() {
 		let body = {
 			"data": {
-				"type": "ChargingStop",
+				"type": "ChargingStart",
 				"attributes": {
 					"action": "stop"
 				}
@@ -1348,6 +1858,19 @@ function refreshBatteryStatus() {
 }
 
 
+function refreshLocation() {
+		log.out = "";
+		output.value  = "";
+		let body = {
+			"data": {
+					"type": "RefreshLocation"
+				}
+		};
+		console.log(kamereonPost(JWT.value,  "actions/refresh-location", body,1 ,"", ""));
+}
+
+
+
 function getAdvancedBatteryStatus() {
 // ok, dati avanzati
 			console.log(kamereonGet(JWT.value,  "battery-status", 2));
@@ -1366,8 +1889,8 @@ function getDoorsStatus() {
 //errore
 		console.log(kamereonGet(JWT.value,  "lock-status",  1));
 		console.log(kamereonGet(JWT.value,  "lock-status",  2));
-			console.log(kamereonPost(JWT.value,  "lock-status", null, 1, "", ""));
-			console.log(kamereonPost(JWT.value,  "lock-status", null, 2, "", ""));
+		console.log(kamereonPost(JWT.value,  "lock-status", null, 1, "", ""));
+		console.log(kamereonPost(JWT.value,  "lock-status", null, 2, "", ""));
 }
 
 
@@ -1461,11 +1984,11 @@ let body =  {
 </script>
 
   </head>
-  <body onload="loadEndpoints(); loadPayloads(); createJSrefreshLinks();">
+  <body onload="loadEndpoints(); loadPayloads(); createJSrefreshLinks(); readRunningMode(); init();">
 <br>
 <center><b>MyRenault vehicle dashboard</b><br>
 Created by <a href="https://autoguida.wordpress.com">Jumpjack</a><br>
-Version 2.4.0 - 21/10/2021</center><br>
+Version 2.9.0 - 2023/05/23</center><br>
 <br>
 <br>
 mail:<input type="text" id="username" name="username" value=""><br>
@@ -1489,7 +2012,23 @@ Login steps performed:<br>
 <br>
 <button onclick="kamereonMultiGet(JWT.value)">Download data</button><br>
 Download progress: <span id="progress" name="progess">-</span><br>
-<button onclick="refreshBatteryStatus()">Force battery data refresh</button><button onclick="refreshHVACStatus()">Force HVAC data refresh</button>
+<button onclick="refreshBatteryStatus()">Force battery data refresh</button>
+<button onclick="refreshHVACStatus()">Force HVAC data refresh</button>
+<button onclick="refreshLocation()">Force GPS data refresh</button><br>
+
+<button onclick="HVAC_on_now()">Start HVAC</button>
+<button onclick="HVAC_off()">Stop HVAC</button><br>
+
+<button onclick="chargeStart()">Start charging</button>
+<button onclick="chargeStop()">Stop charging</button>
+<button onclick="setChargeModeScheduled()">Set charge mode = scheduled</button>
+<button onclick="setChargeModeNow()">Set charge mode = now</button><br>
+
+<button onclick="getNotificationStatus('last')">Show LAST status of notification</button>
+<button onclick="getNotificationStatus('all')">Show full data of notification</button><br>
+
+
+
 <table>
 <tr>
 <td>Output</td><td>Debug log</td><td>Possible errors</td>
@@ -1519,7 +2058,13 @@ Download progress: <span id="progress" name="progess">-</span><br>
 </tr>
 
 </table>
-<br><table id="finalResults" name="finalResults" border="1">
+Temperatures:<br>
+- Battery: <span id="batteryTemperature" name="batteryTemperature">n/a</span><br>
+- Internal: <span id="internalTemperature" name="internalTemperature">n/a</span><br>
+- External: <span id="externalTemperature" name="externalTemperature">n/a</span><br>
+- Global target: <span id="globalTargetTemperature" name="globalTargetTemperature">n/a</span><br>
+<br>
+<table id="finalResults" name="finalResults" border="1">
 <tr>
 <td><b>Parameter</b></td>
 <td><b>Value</b></td>
@@ -1543,11 +2088,11 @@ Endpoints <a href="https://renault-api.readthedocs.io/en/stable/endpoints.html#v
 
 
 	====================== FOR DEVELOPERS ===================<br>
-	<input value="./gigya-login.php" id="gigyaPhpLogin" name="gigyaPhpLogin"> <a href="./gigya-login.txt">Download script</a><br>
+	<input value="http://jumpjack.altervista.org/myrenault/gigya-login.php" id="gigyaPhpLogin" name="gigyaPhpLogin"> <a href="./gigya-login.txt">Download script</a><br>
 <!--	Proxy script: <input type="text" id="proxyScript" name="proxyScript" value="http://win98.altervista.org/space/exploration/myp.php" size="100"><br>
 	Proxy parameters: <input type="text" id="proxyParams" name="proxyParams" value="?pass=miapass&mode=native&url=" size="100"><br>
 	CORS proxy shall allow:<br>
-    X-GIGYA-ID_TOKEN,  X-GIGYA-ID-TOKEN, apikey,  expiration, json, fields, login_token, authorization, access_token<br>
+	X-GIGYA-ID_TOKEN,  X-GIGYA-ID-TOKEN, apikey,  expiration, json, fields, login_token, authorization, access_token<br>
 -->
 	<button onclick="getAllData()">Get all data</button><br>
 Endpoint:<br>
@@ -1557,7 +2102,7 @@ Endpoint:<br>
 <br>
 Header payload:
 <select id="payloadsList" name="payloadsList" onchange = "fillPayload()"></select>
-Successfully tested? <span id="payloadTested" name="payloadTested">-</span><br>
+Test result: <span id="payloadTested" name="payloadTested">-</span><br>
 <pre><textarea name="actionPayloadSpan" id="actionPayloadSpan" cols=120 rows=20>
 
 </textarea>
@@ -1570,10 +2115,6 @@ Successfully tested? <span id="payloadTested" name="payloadTested">-</span><br>
 	<input id="HVACtemp" name="HVACtemp" value=20><br>
 	<button onclick="HVAC_off()">Turn off HVAC</button><br>
 <br>
-	<button onclick="chargeStart()">Start charging</button><br>
-	<button onclick="chargeStop()">Stop charging</button><br>
-	<button onclick="setChargeModeScheduled()">Set charge mode = scheduled</button><br>
-	<button onclick="setChargeModeNow()">Set charge mode = now</button><br>
 	<!--<button onclick="setChargeSchedule()">Setup charge schedule</button><br>-->
 <br>
 	<button onclick="getAdvancedBatteryStatus()">Get advanced battery status</button><br>
@@ -1584,15 +2125,20 @@ Successfully tested? <span id="payloadTested" name="payloadTested">-</span><br>
 <a href="https://renault-wrd-prod-1-euw1-myrapp-one.s3-eu-west-1.amazonaws.com/configuration/android/config_it_IT.json">Gigya apikey e Kamereon Apikey - credentials file</a>
 <br>
 
-Gigya api key: <input type="text" id="gapikey" name="gapikey" size=100 value="3_js8th3jdmCWV86fKR3SXQWvXGKbHoWFv8NAgRbH7FnIBsi_XvCpN_rtLcI07uNuq"><br>
-Kamereon key: <input type="text" id="kapikey" name="kapikey" size=100  value="Ae9FDWugRxZQAGm3Sxgk7uJn6Q4CGEA2"><br>
+Gigya api key: <input type="text" id="gapikey" name="gapikey" size=100 value="[to be loaded from file]"><br>
+Kamereon key: <input type="text" id="kapikey" name="kapikey" size=100  value="[to be loaded from file]"><br>
 <br>
-cookieValue:    <input type="text" id="cookieValue" name="cookieValue" value=""  size = 100><br>
+cookieValue:	<input type="text" id="cookieValue" name="cookieValue" value=""  size = 100><br>
 Id_token (JWT): <input type="text" id="JWT" name="JWT" value="" size=100><br>
-Person Id:      <input type="text" id="personId" name="personId" value="" size = 50><br>
-1st account:    <input type="text" id="accountId" name="accountId" value="" size=100> - Type: <input type="text" id="accountIdType" name="accountIdType" value="" size=10> <br>
-2nd account:    <input type="text" id="accountId2" name="accountId2" value="" size=100> - Type: <input type="text" id="accountId2Type" name="accountId2Type" value="" size=10> <br>
-VIN:            <input type="text" id="MY_VIN" name="MY_VIN" value="-"><br>
+Person Id:	  <input type="text" id="personId" name="personId" value="" size = 50><br>
+1st account:	<input type="text" id="accountId" name="accountId" value="" size=100> - Type: <input type="text" id="accountIdType" name="accountIdType" value="" size=10> <br>
+2nd account:	<input type="text" id="accountId2" name="accountId2" value="" size=100> - Type: <input type="text" id="accountId2Type" name="accountId2Type" value="" size=10> <br>
+VIN:			<input type="text" id="MY_VIN" name="MY_VIN" value="-"> <span id="vehicleDetails" name="vehicleDetails"></span><br>
+<select id = "lstVIN" Name="lstVIN" Size="4">
+</select>
+<button onclick="MY_VIN.value = lstVIN[lstVIN.selectedIndex].innerHTML; showVehicleData(lstVIN.selectedIndex)">Use selected VIN</button></br>
+<br>
+
 <hr>
 <br><b><big>Manual login and test</big></b><br>
 Copy this payload into <a href="http://www.reqbin.com">reqbin.com</a> to manually log in:<br>
