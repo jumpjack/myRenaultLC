@@ -2,7 +2,9 @@
  Standalone browser page to access Renault vehicles data
  
 Available here: http://jumpjack.altervista.org/myrenault
- 
+
+and here: https://jumpjack.github.io/myRenaultLC/
+
  **Note: the page is experimental, use at your own risk**
 
 Fill in your MyRenault credentials (email and password), then select the endpoint from the list, and click QUERY button. Some endpoints have two versions available, depending on your car: try both; if the endpoint exists, you'll see the output in the output panel, else you'll see a "404" error if endpoint does not exists, or other numbers if you missed some additional parameters in the endpoint.
