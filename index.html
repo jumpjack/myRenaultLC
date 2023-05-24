@@ -2,25 +2,34 @@
 <html>
   <head>
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="Cache-Control" content="no-store" />
   <meta name="generator" content="PSPad editor, www.pspad.com">
   <title>Unofficial MyRenault dashboard for browsers</title>
 
+	<!--<script src="myrenault-public.js?t=<?=time()?> type="text/javascript""></script>-->
 
-	<script src="myrenault-public.js?t=<?=time()?> type="text/javascript""></script>
-	<script src="endpoints.js?t=<?=time()?> type="text/javascript""></script>
-	<script src="errors.js?t=<?=time()?> type="text/javascript""></script>
-	<script src="payloads.js?t=<?=time()?> type="text/javascript""></script>
+  <script>
+    var scr = document.createElement("script");
+    scr.src = "myrenault-public.js" + "?ts=" + new Date().getTime();
+    document.getElementsByTagName("head")[0].appendChild(scr);
+  </script>
+
+	<script src="endpoints.js?t=<?=time()?>" type="text/javascript"></script>
+	<script src="errors.js?t=<?=time()?>" type="text/javascript"></script>
+	<script src="payloads.js?t=<?=time()?>" type="text/javascript"></script>
 	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 
   <script>
 // 2.9.0 - 2023-05-23
-//  Updated kamereon api key
-//	Fixed bug of infinite loop for notifications monitoring
-//  Added list of available temperatures (to do: missing externalTemperature and temporary temperature for manual HVAC on)
+// Updated kamereon api key
+// Fixed bug of infinite loop for notifications monitoring
+// Added list of available temperatures (to do: missing externalTemperature)
+
 
 // 2.8.1 - 2022-06-18
 // Fixed some payloads
 // Improved notification management
+
 
 // 2.8.0 - 2022-04-29
 // Added support for notifications
@@ -33,6 +42,7 @@
 // Fixed bug of bad descriptions for charging status
 // Fixed bug of bad processing of char\ges/chargestatus
 // Added management of chargingStatus besides chargeStatus
+
 
 // 2.7.0 - 2022-03-28
 // Implemented CSV(TSV) output for /charges
@@ -75,6 +85,17 @@
 // 1.0.1 Oscurato VIN in output
 // 1.0.0 Prima versione pubblica
 
+/*var s = document.createElement('script');
+s.type = 'text/javascript';
+s.src = 'myrenault-public.js?' + new Date().getMilliseconds();
+*/
+
+/*var scr = document.createElement("script");
+scr.src = "myrenault-public.js" + "?ts=" + new Date().getTime();
+document.getElementsByTagName("head")[0].appendChild(scr);
+*/
+
+console.log("---------------",newData);
 localRun = null;
 
 GIGYA_API_KEY = null;
@@ -122,6 +143,7 @@ function init() {
 	GIGYA_API_KEY= newData.servers.gigyaProd.apikey;
 	gapikey.value = GIGYA_API_KEY;
 	kamereonurl = newData.servers.wiredProd.target;
+console.log("Writing to GUI:", newData.servers.wiredProd.apikey);
 	kapikey.value = newData.servers.wiredProd.apikey; // Read from file, write to interface, which is editable by user
 	GIGYA_PHP_LOGIN = gigyaPhpLogin.value;
 }
@@ -182,6 +204,7 @@ function callByClick(endp, libVer) {
 	// Called when clicked on endpoint
 		endpoint.value = endp;
 		output.value = "";
+		outputNotifications.value = "";
 		log.value = "";
 		//startCountdown();
 		justQuery(libVer);
@@ -282,6 +305,7 @@ function justQuery(libraryVersion) {
 	lastStep = "justQuery v." + libraryVersion;
 	log.value += "Endpoint '" + endpoint.value + "', library version: " + libraryVersion + ":\n";
 	output.value = "";
+	outputNotifications.value = "";
 	log.value += "Sending query...\n";
 	console.log("=== DIRECT QUERY");
 
@@ -314,6 +338,7 @@ console.log("finalQueryUrl ", queryUrl);
 
 function main() {
 	output.value = "";
+	outputNotifications.value = "";
 	log.value = "Logging in...\n";
 	cookieValue.value="waiting...";
 	JWT.value = "waiting...";
@@ -380,7 +405,7 @@ console.log("Loading apikey:" , kapikey.value);
 	console.log("Logging in from local PC");
 
 return axios.get(
-		GIGYA_PHP_LOGIN + '?gigyakey=' + GIGYA_API_KEY + '&gigyasite=' + gigyaurl +  '&username=' + username.value + '&password=' + password.value + '&kamereon=Ae9FDWugRxZQAGm3Sxgk7uJn6Q4CGEA2',
+		GIGYA_PHP_LOGIN + '?gigyakey=' + GIGYA_API_KEY + '&gigyasite=' + gigyaurl +  '&username=' + username.value + '&password=' + password.value + '&kamereon=' + KAMEREON_KEY,
 		null, // No payload required for login
 		{	headers: null	}
 	)
@@ -1343,7 +1368,8 @@ console.log("------- Starting notification loop for id ", id, ", endpoint " , en
 	endPointUrlGlobal = endpointUrl; // used to store hvac-start for further processing of notifications
 console.log("!!!!!!!!!!!!Setting interval!", notifInterval);
 	if (notifInterval === null) {
-		notifInterval = setInterval(getNotificationStatus, NOTIF_INT,"auto");
+		responseShown = false;
+		notifInterval = setInterval(getNotificationStatus, NOTIF_INT,"auto", endPointUrlGlobal);
 	} else {
 console.log("!?!?!?!? Double call prevented");
 	}
@@ -1362,21 +1388,29 @@ function getAllNotificationStatusManual() {
 
 
 
-function getNotificationStatus(mex) {
+function getNotificationStatus(mex, endpUrl) {
 	attemptsCount++;
-	console.log(">>>>>> Called by ",mex, ", attempt n. ", attemptsCount);
-	if (attemptsCount > NOTIF_MAX) { // after max number of attempts is reached, get status
+	console.log(">>>>>> Called by ",mex, " for " , endpUrl , ", attempt n. ", attemptsCount);
+	if (attemptsCount > NOTIF_MAX){ // after max number of attempts is reached, get status
 		clearInterval(notifInterval); // stop loop - debug: not working?!?
 		notifInterval = null;
 		attemptsCount = 0;
 console.log("Loop end.");
 		output.value += "Loop end."
-		if (endPointUrlGlobal.indexOf("hvac-start") >= 0 ) {
-	   kamereonGet(JWT.value, "hvac-status",  1);
-		}
+//		if (endPointUrlGlobal.indexOf("hvac-start") >= 0 ) {
+//	   kamereonGet(JWT.value, "hvac-status",  1);
+//		}
 		return;
 	}
 
+	if (responseShown === true){ // after max number of attempts is reached, get status
+		clearInterval(notifInterval); // stop loop - debug: not working?!?
+		notifInterval = null;
+		attemptsCount = 0;
+console.log("Notification shown for " , endpUrl);
+		output.value += "Notification shown for " + endpUrl;
+		return;
+	}
 	output.value += "\nAttempt n. " +  attemptsCount + ", please wait...\n";
 	axios.get(
 		notificationUrl,
@@ -1394,20 +1428,21 @@ console.log("Loop end.");
 			if (datum) {
 				result += datum.notifDate + ", " + datum.commandType + ", " + datum.actionType;
 				if (datum.commandResponse) {
-		  result += ", " + datum.commandResponse.status;
+		  		result += ", commandResponse.status=" + datum.commandResponse.status;
 				}
 				if (datum.srpResponse) {
-		  result += ", SRP status: " + datum.srpResponse.status
+					result += ", SRP status: " + datum.srpResponse.status
 					if (datum.srpResponse.errorCode) {
-			  result += ", SRP error: " + datum.srpResponse.errorCode
+						result += ", SRP error: " + datum.srpResponse.errorCode
 					}
 					if (datum.srpResponse.errorCategory) {
-			  result += ", categoryId=" +  datum.srpResponse.errorCategory.categoryId + ", categoryType=" + datum.srpResponse.errorCategory.categoryType
+						result += ", categoryId=" +  datum.srpResponse.errorCategory.categoryId + ", categoryType=" + datum.srpResponse.errorCategory.categoryType
 					}
 				}
 			}
 			console.log(i, result);
-	  output.value += result;
+	  outputNotifications.value += result;
+		responseShown = true;
 		}
 	})
 	.catch(
@@ -1699,6 +1734,7 @@ console.log("====================POST URL: " + fullUrl);
 function getWithVersion(v) {
 	log.value ="";
 	output.value="";
+	outputNotifications.value = "";
 		kamereonGet(JWT.value, actionEndpoint.value, v)
 }
 
@@ -1706,6 +1742,7 @@ function getWithVersion(v) {
 function postWithVersion(v) {
 	log.value ="";
 	output.value="";
+	outputNotifications.value = "";
 	try {
 		body = actionPayloadSpan.value
 	} catch(e) {
@@ -1719,6 +1756,7 @@ function postWithVersion(v) {
 function refreshHVACStatus() {
 		log.out = "";
 		output.value  = "";
+		outputNotifications.value = "";
 		HVACid.value = "please wait...";
 		let body = {
 			"data": {
@@ -1851,6 +1889,7 @@ function refreshBatteryStatus() {
 // ok
 		log.out = "";
 		output.value = "";
+		outputNotifications.value = "";
 		let body = {
 				'data': {'type': 'RefreshBatteryStatus'}
 			}
@@ -1861,6 +1900,7 @@ function refreshBatteryStatus() {
 function refreshLocation() {
 		log.out = "";
 		output.value  = "";
+		outputNotifications.value = "";
 		let body = {
 			"data": {
 					"type": "RefreshLocation"
@@ -2034,11 +2074,9 @@ Download progress: <span id="progress" name="progess">-</span><br>
 <td>Output</td><td>Debug log</td><td>Possible errors</td>
 </tr>
 <tr>
-
 <td>
 	<span><textarea id="output" name="output" value="output" cols=60 rows=15></textarea></span>
 </td>
-
 <td>
 	<span><textarea id="log" name="log" value="" cols=90 rows=15></textarea></span>
 </td>
@@ -2057,11 +2095,16 @@ Download progress: <span id="progress" name="progess">-</span><br>
 
 </tr>
 
-</table>
+</table><br>
+<br>
+Notifications status:<br>
+<span id="outputNotifications" name="outputNotifications">-</span><br>
+<br>
 Temperatures:<br>
 - Battery: <span id="batteryTemperature" name="batteryTemperature">n/a</span><br>
 - Internal: <span id="internalTemperature" name="internalTemperature">n/a</span><br>
 - External: <span id="externalTemperature" name="externalTemperature">n/a</span><br>
+- Next target: <span id="nextTargetTemperature" name="nextTargetTemperature">n/a</span><br>
 - Global target: <span id="globalTargetTemperature" name="globalTargetTemperature">n/a</span><br>
 <br>
 <table id="finalResults" name="finalResults" border="1">
@@ -2088,8 +2131,8 @@ Endpoints <a href="https://renault-api.readthedocs.io/en/stable/endpoints.html#v
 
 
 	====================== FOR DEVELOPERS ===================<br>
-	<input value="http://jumpjack.altervista.org/myrenault/gigya-login.php" id="gigyaPhpLogin" name="gigyaPhpLogin"> <a href="./gigya-login.txt">Download script</a><br>
-<!--	Proxy script: <input type="text" id="proxyScript" name="proxyScript" value="http://win98.altervista.org/space/exploration/myp.php" size="100"><br>
+	<input value="https://jumpjack.altervista.org/myrenault/gigya-login.php" id="gigyaPhpLogin" name="gigyaPhpLogin"> <a href="./gigya-login.txt">Download script</a><br>
+<!--	Proxy script: <input type="text" id="proxyScript" name="proxyScript" value="https://win98.altervista.org/space/exploration/myp.php" size="100"><br>
 	Proxy parameters: <input type="text" id="proxyParams" name="proxyParams" value="?pass=miapass&mode=native&url=" size="100"><br>
 	CORS proxy shall allow:<br>
 	X-GIGYA-ID_TOKEN,  X-GIGYA-ID-TOKEN, apikey,  expiration, json, fields, login_token, authorization, access_token<br>

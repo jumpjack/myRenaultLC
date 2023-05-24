@@ -18,6 +18,7 @@ TEMP_NAMES = [
   "batteryTemperature",
   "internalTemperature",
   "globalTargetTemperature",
+	"nextTargetTemperature", // set at manual HVAC startup
   "externalTemperature" // where?!?
 ];
 
