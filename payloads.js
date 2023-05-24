@@ -54,7 +54,7 @@ samplePayloads = [
 {
 	"pldName" :"HvacStop1" ,
 	"associatedAction" : "hvac-start",
-	"testedOk" : "command accepted, HVAC status to be verified", // command accepted, response received,
+	"testedOk" : "ok",
 	"pldContents" :
 		{
 			"data":{
@@ -69,7 +69,7 @@ samplePayloads = [
 {
 	"pldName" :"HvacStop2" ,
 	"associatedAction" : "hvac-start",
-	"testedOk" : "n/a",
+	"testedOk" : "not stopping after starting!",
 	"pldContents" :
 		{
 			"data":{
@@ -140,6 +140,19 @@ samplePayloads = [
 		{
 			"data": {
 					"type": "RefreshBatteryStatus"
+				}
+		}
+},
+
+
+{
+	"pldName" :"Refresh GPS status" ,
+	"associatedAction" : "refresh-location",
+	"testedOk" : "yes",
+	"pldContents" :
+		{
+			"data": {
+					"type": "RefreshLocation"
 				}
 		}
 },
@@ -421,18 +434,17 @@ samplePayloads = [
 // https://github.com/Tobiaswk/dartnissanconnect/blob/41a5eee9f7dbd04b0b2558ffaa73f0fd77c40fc7/lib/src/nissanconnect_vehicle.dart
 	"pldName" :"Lock/unlock doors" ,
 	"associatedAction" : "lock-unlock",
-	"testedOk" : "n/a",
+	"testedOk" : "not authorized",
 	"pldContents" :
-		{
-		   "data": {
-		            "type": "LockUnlock",
-		            "attributes": {
-		              "lock": "lock", // "unlock"
-		              "doorType": "all", // "driver_s_door" : "doors_hatch"}",
-		              "srp": ""
-		            }
-		    }
-		}
+			{
+			  "data": {
+			      "type": "LockUnlock",
+			      "attributes": {
+							"target": "driver_s_door",
+							"action" : "lock"
+			      }
+			  }
+}
 },
 
 
@@ -446,12 +458,10 @@ samplePayloads = [
           'data': {
             'type': 'SrpInitiates',
             'attributes': {
-//    var salt = '0' * 20;
-//    var verifier = 'ABCDEFGH' * 50;
-
-              's': "00000000000000000000",
-              'i': "what?",
-              'v': "ABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGH",
+              's': "00000000000000000000", // s = salt, 20 char
+              'i': "what?", 							// i = user Id, 0 to 24 chars; value unknown
+																					// v = verifier, 512 chars
+              'v': "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
             }
 		}
 	}
@@ -476,7 +486,7 @@ samplePayloads = [
 
 {
 	"pldName" :"Engine start" ,
-	"associatedAction" : "engine-start", 
+	"associatedAction" : "engine-start",
 	"testedOk" : "403 - Forbidden",
 	"pldContents" :
 		{
@@ -484,6 +494,21 @@ samplePayloads = [
 			"type":"EngineStart",
 				"attributes":{
 					"action":"start",
+				}
+			}
+		}
+},
+
+{
+	"pldName" :"Engine stop" ,
+	"associatedAction" : "engine-start",
+	"testedOk" : "403 - Forbidden",
+	"pldContents" :
+		{
+			"data":{
+			"type":"EngineStart",
+				"attributes":{
+					"action":"stop",
 				}
 			}
 		}
