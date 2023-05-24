@@ -145,7 +145,7 @@ function init() {
 	kamereonurl = newData.servers.wiredProd.target;
 console.log("Writing to GUI:", newData.servers.wiredProd.apikey);
 	kapikey.value = newData.servers.wiredProd.apikey; // Read from file, write to interface, which is editable by user
-	GIGYA_PHP_LOGIN = gigyaPhpLogin.value;
+//	GIGYA_PHP_LOGIN = gigyaPhpLogin.value;
 }
 
 function createJSrefreshLinks() {
@@ -337,6 +337,7 @@ console.log("finalQueryUrl ", queryUrl);
 
 
 function main() {
+  GIGYA_PHP_LOGIN = gigyaPhpLogin.value;
 	output.value = "";
 	outputNotifications.value = "";
 	log.value = "Logging in...\n";
