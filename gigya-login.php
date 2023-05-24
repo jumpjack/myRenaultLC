@@ -1,5 +1,23 @@
 <?php
-// v. 1.0.0
+// v. 1.1.0
+
+if (($_SERVER['HTTP_ORIGIN'] == "win98.altervista.org") ||
+    ($_SERVER['HTTP_ORIGIN'] == "jumpjack.altervista.org") ||
+    ($_SERVER['HTTP_ORIGIN'] == "jumpjack.github.io") ||
+    ($_SERVER['HTTP_ORIGIN'] == 'null') || // for localhost usage
+    ($_SERVER['HTTP_ORIGIN'] == null) || // for localhost usage
+    ($_SERVER['HTTP_ORIGIN'] == "127.0.0.1") ||
+    ($_SERVER['HTTP_ORIGIN'] == "localhost")
+	) {
+		//echo "Riconosciuto<br>";
+		header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+		header('Access-Control-Allow-Credentials: true');
+	} else {
+		//echo "NON riconosciuto<br>";	//	echo "Domain '" . $_SERVER['HTTP_ORIGIN'] . "' is not authorized to use this proxy.<br>";
+		header('Access-Control-Allow-Credentials: false');
+		return -1;
+	}
+
 function checkResponse($resp, $errnum) {
   if ($resp === FALSE) {
 		echo "Error in Renault login, missing response.<br>";
@@ -77,7 +95,7 @@ if (isset($_GET['kamereon']) ){
   $checkResult = checkResponse($response,"001");
   //echo "Result 001: " . $checkResult . "<br>";
 	if ( $checkResult !==0 ) {
-		echo("Login error 001. TERMINATED.");
+		echo '{"loginData" : {"data" : "Login error 001. TERMINATED (" . $checkResult . ")"}}';
 		return -1;
 	}
 
@@ -101,7 +119,7 @@ if (isset($_GET['kamereon']) ){
   $checkResult = checkResponse($response,"002");
   //echo "Result 002: " . $checkResult . "<br>";
 	if ( $checkResult !==0 ) {
-		echo ("Login error 002. TERMINATED.");
+		echo '{"loginData" : {"data" : "Login error 002. TERMINATED (" . $checkResult . ")"}}';
 		return -1;
 	}
 
