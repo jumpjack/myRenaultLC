@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Il cambio della Renault Captur E-Tech</title>
+    <style>
+        #container {
+            position: relative;
+        }
+
+        .interactive-image {
+            position: relative;
+            cursor: pointer;
+            top: 0;
+            left: 0;			
+        }
+
+        #coordinates {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background-color: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+        }	
+		
+        .image {
+            position: absolute;
+            display: none; 
+        }
+		
+        #emptyRectangle {
+            position: absolute;
+            display: none;
+            border: 5px dashed black; /* Colore e stile del bordo */
+            width: 42px; /* Larghezza del rettangolo */
+            height: 55px; /* Altezza del rettangolo */
+        }	
+		
+		#gearLabel	{
+            position: absolute;
+            top: 200px;
+            left: 530px;
+            background-color: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+        }	
+		
+		#gearChainIce	{
+            position: absolute;
+            top: 630px;
+            left: 750px;
+            background-color: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+        }	
+		
+		#gearChainEle	{
+            position: absolute;
+            top: 660px;
+            left: 750px;
+            background-color: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+        }	
+		
+		#gearChainCombo	{
+            position: absolute;
+            top: 690px;
+            left: 750px;
+            background-color: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+        }	
+		
+
+		#gearChainIceLabel	{
+            position: absolute;
+            top: 630px;
+            left: 650px;
+            background-color: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+        }	
+		
+		#gearChainEleLabel	{
+            position: absolute;
+            top: 660px;
+            left: 650px;
+            background-color: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+        }	
+		
+		#gearChainComboLabel	{
+            position: absolute;
+            top: 690px;
+            left: 650px;
+            background-color: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+        }	
+		
+
+			
+    </style>
+</head>
+<body>
+<h1>Il cambio della Renault Captur E-Tech</h1>
+Clicca sui riquadri in basso per visualizzare la marcia corrispondente.<br><br>
+    <div id="container">
+        <img id="base" src="all-new-empty.jpg" alt="Base Image" class="interactive-image">
+		<img src="21_1.jpg" alt="Overlay Image" class="image" id="overlay21_1">
+		<img src="21_2.jpg" alt="Overlay Image" class="image" id="overlay21_2">
+		<img src="21_3.jpg" alt="Overlay Image" class="image" id="overlay21_3">
+
+		<img src="22_1.jpg" alt="Overlay Image" class="image" id="overlay22_1">
+		<img src="22_2.jpg" alt="Overlay Image" class="image" id="overlay22_2">
+		<img src="22_3.jpg" alt="Overlay Image" class="image" id="overlay22_3">
+
+		<img src="23_1.jpg" alt="Overlay Image" class="image" id="overlay23_1">
+		<img src="23_2.jpg" alt="Overlay Image" class="image" id="overlay23_2">
+		<img src="23_3.jpg" alt="Overlay Image" class="image" id="overlay23_3">
+		
+
+		<img src="coupler.jpg" alt="Overlay Image" class="image" id="coupler23">
+		<img src="coupler.jpg" alt="Overlay Image" class="image" id="coupler22">
+		<img src="coupler.jpg" alt="Overlay Image" class="image" id="coupler21">
+
+		<img src="danger.jpg" alt="Overlay Image" class="image" id="danger">
+		
+        <div id="emptyRectangle"></div> <!-- Aggiunto il rettangolo vuoto -->
+
+		<div id="gearLabel">Gear</div>		
+
+		<div id="gearChainIceLabel">Termico: </div>		
+		<div id="gearChainEleLabel">Elettrico</div>		
+		<div id="gearChainComboLabel">Combinati:</div>		
+
+		<div id="gearChainIce">gearChainIce</div>		
+		<div id="gearChainEle">gearChainEle</div>		
+		<div id="gearChainCombo">gearChainCombo</div>		
+    </div>
+	
+	<br>
+	Leggi questo <a href="https://jumpjack.wordpress.com/2021/01/17/renault-captur-plugin-etech-le-marce-segrete-e-proibite/"> articolo sull'argomento</a> e <a href="https://jumpjack.wordpress.com/?s=etech">tutti gli articoli sull'E-tech.</a><br>
+	Qui trovi il <a href="https://patentimages.storage.googleapis.com/05/8b/c7/1ae1a1b0ba89a0/US10479188.pdf">brevetto US10479188</a> della Renault sul cambio/motore E-tech,by Nicolas Fremau.<br>
+<!--<div id="coordinates">test</div>-->
+    <script>
+
+		
+all =   [
+			[
+				[
+					[2,2,2],[1,2,2],  [3,2,2]
+				],
+				[
+					[2,1,2], [1,1,2],  [3,1,2]
+				],
+				[
+					[2,3,2], [1,3,2],  [3,3,2]
+				],
+			],
+			[
+				[
+					 [2,2,1],  [1,2,1], [3,2,1]
+				],
+				[
+					 [2,1,1],  [1,1,1], [3,1,1]
+				],
+				[
+					 [2,3,1],  [1,3,1],  [3,3,1]
+				],
+			],
+			 [
+				[
+					 [2,2,3,],  [1,2,3] ,  [3,2,3]
+				],
+				[
+					 [2,1,3,],   [1,1,3] , [3,1,3]
+				],
+				[
+					 [2,3,3,],   [1,3,3] , [3,3,3]
+				],
+			]
+		];
+		
+
+gearsNames =   [
+			[
+				[
+					"forbidden", "Ice2 + EvA", "forbidden"
+				],
+				[
+					"Coupled + EvA (Ice1)", "EvA", "Ices + EvA"
+				],
+				[
+					"Forbidden", "Ice4 + EvA", "Forbidden"
+				],
+			],
+			[
+				[
+					 "UNUSED?", "Ice2", "Forbidden"
+				],
+				[
+					 "Charge", "Ice neutral", "Ice3"
+				],
+				[
+					"UNUSED?", "Ice4", "Forbidden"
+				],
+			],
+			 [
+				[
+					 "Forbidden", "Ice2 + EvB", "Forbidden"
+				],
+				[
+					 "Coupling + EvB (Ice5)", "EvB", "Ice3 + EvB",
+				],
+				[
+					 "Forbidden", "Ice4 + EvB", "Forbidden"
+				],
+			]
+		];
+		
+
+meshedGears =   [
+			[
+				[
+					[2,2,2],{E:"9:11", T:"15:13"},  [3,2,2]
+				],
+				[
+					{E:"-", T:"-", Combo: "T-17:18,20:10-E:9,11"}, {E:"9:11", T:""},  {E:"9:11", T:"17:18, 19:16:14"}
+				],
+				[
+					[2,3,2], {E:"9:11", T:"16:14"},  [3,3,2]
+				],
+			],
+			[
+				[
+					 [2,2,1],  {E:"-", T:"15:13"}, [3,2,1]
+				],
+				[
+					 {E:"-", T:"-", Combo: "T-17:18:20:10-E"},   {E:"-", T:"-"}, {E:"-", T:"17:18, 19:16:14"}
+				],
+				[
+					 [2,3,1],  {E:"-", T:"16:14"},  [3,3,1]
+				],
+			],
+			 [
+				[
+					 [2,2,3,],  {E:"10:12", T:"15:13"} ,  [3,2,3]
+				],
+				[
+					 {E:"-", T:"-", Combo:"T-17:18,20,10-E10:12"},   {E:"10:12", T:"-"} , {E:"10:12", T:"17:18, 19:16:14"}
+				],
+				[
+					 [2,3,3,],   {E:"10:12", T:"16:14"}, [3,3,3]
+				],
+			]
+		];
+			
+		
+forbidden = [
+	[2,2,2], [3,2,2],	[2,3,2], [3,3,2], [3,2,1], [3,3,1] , [2,2,3,], [2,3,3,], [3,2,3], [3,3,3]
+]						
+
+		const coupler21x = [210, 200, 227 ]; coupler21y = 282;
+		const coupler22x = [285, 270, 297 ]; coupler22y = 205;
+		const coupler23x = [277, 247, 297 ]; coupler23y = 129;
+		const dangerX = 700; dangerY = 250;
+		
+        const gridSize = { rows: 3, columns: 9 };
+        const cellSize = { width: 61, height: 87 };
+        const baseClickArea = { startX: 40, startY: 480, endX: 574, endY: 715 };
+        const emptyRectangle = document.getElementById('emptyRectangle');
+        const gearLabel = document.getElementById('gearLabel');
+        const gearChainIce = document.getElementById('gearChainIce');
+        const gearChainEle = document.getElementById('gearChainEle');
+        const gearChainCombo = document.getElementById('gearChainCombo');
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const container = document.getElementById('container');
+            const baseImage = document.getElementById('base');
+			var c21;
+			var c22;
+			var c23;
+			combo = 0;
+			var row;
+			var columnRaw;
+
+            baseImage.addEventListener('mousemove', function (event) {
+                const rect = baseImage.getBoundingClientRect();
+				
+                // Calcola le coordinate assolute
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+
+                // Calcola le coordinate in termini di riga e colonna
+                if (
+                    x >= baseClickArea.startX && x <= baseClickArea.endX &&
+                    y >= baseClickArea.startY && y <= baseClickArea.endY
+                ) {
+                    row = Math.floor((y - baseClickArea.startY) / cellSize.height) + 1;
+                    columnRaw = Math.floor((x - baseClickArea.startX) / cellSize.width) + 1;
+					c21= Math.ceil(columnRaw / 3);
+					c23 = columnRaw - 3*(c21-1)
+					c22 = row;
+
+					combo = all[c21-1][c22-1][c23-1];
+					
+/*document.getElementById('coordinates').innerHTML = `Absolute: X: ${x}` +  `,Y: ${y}` + `Grid:  Row: ${row}` + `,Column: ${columnRaw}` + `, C21: ${c21}, C22: ${c22}, C23: ${c23} - ` + 
+					`23: ${all[c21-1][c22-1][c23-1][0]}` + ", " + `22: ${all[c21-1][c22-1][c23-1][1]}` + ", " +  `21: ${all[c21-1][c22-1][c23-1][2]}`;
+*/					
+				validClick=true;
+                } else {
+					validClick=false
+				}
+            });
+			
+            baseImage.addEventListener('click', function () {
+                if (!validClick) return			
+				resetOverlays();
+console.log(meshedGears[c21-1][c22-1][c23-1]);				
+				gearLabel.innerHTML = gearsNames[c21-1][c22-1][c23-1]
+				gearChainIce.innerHTML = meshedGears[c21-1][c22-1][c23-1].T;
+				gearChainEle.innerHTML = meshedGears[c21-1][c22-1][c23-1].E;
+				gearChainCombo.innerHTML = meshedGears[c21-1][c22-1][c23-1].Combo;
+				
+				console.log("Il coupler c21 va in posizione " , combo[2]);		
+	            var overlayId = "overlay21_" + combo[2];		
+	            var overlay = document.getElementById(overlayId);		
+	            overlay.style.left = `653px`;
+	            overlay.style.top = `461px`;
+	            overlay.style.display = 'block';                
+	            overlay.style.zIndex = 1;                   
+
+	            overlayId = "coupler21";		
+	            overlay = document.getElementById(overlayId);		
+	            overlay.style.left = coupler21x[combo[2]-1] + "px"; //`247px`; 
+	            overlay.style.top = coupler21y + "px";
+	            overlay.style.display = 'block';                
+	            overlay.style.zIndex = 1;                		   
+
+
+
+
+
+
+				console.log("Il coupler c22 va in posizione " , combo[1]);		
+	            overlayId = "overlay22_" + combo[1];
+	            overlay = document.getElementById(overlayId);
+	            overlay.style.left = `802px`;
+	            overlay.style.top = `241px`;
+	            overlay.style.display = 'block';                
+	            overlay.style.zIndex = 1;                  
+				
+	            overlayId = "coupler22";		
+	            overlay = document.getElementById(overlayId);		
+	            overlay.style.left = coupler22x[combo[1]-1] + "px"; //`247px`; 
+	            overlay.style.top = coupler22y + "px";
+	            overlay.style.display = 'block';                
+	            overlay.style.zIndex = 1;                		   
+
+
+
+				console.log("Il coupler c23 va in posizione " , combo[0] + "," + coupler23x[combo[0]-1] + "px", combo[0]-1);		
+	            overlayId = "overlay23_" + combo[0];
+	            overlay = document.getElementById(overlayId);
+	            overlay.style.left = `805px`;
+	            overlay.style.top = `77px`;
+	            overlay.style.display = 'block';                
+	            overlay.style.zIndex = 1;              
+				
+	            overlayId = "coupler23";		
+	            overlay = document.getElementById(overlayId);		
+	            overlay.style.left = coupler23x[combo[0]-1] + "px"; //`247px`; 
+	            overlay.style.top = coupler23y + "px";
+	            overlay.style.display = 'block';                
+	            overlay.style.zIndex = 1;                		   
+
+
+              emptyRectangle.style.top = baseClickArea.startY + cellSize.height * (row-1) + "px"; //`461px`;
+              emptyRectangle.style.left = baseClickArea.startX + cellSize.width * (columnRaw-1) + "px"; //`40px`;
+              emptyRectangle.style.display = 'block';
+			  
+			  for (var i = 0; i < forbidden.length; i++) {			  
+			  	if ((combo[0] === forbidden[i][0]) && (combo[1] === forbidden[i][1]) && (combo[2] === forbidden[i][2])) {
+		            overlayId = "danger";		
+		            overlay = document.getElementById(overlayId);		
+		            overlay.style.left = dangerX + "px"; //`247px`; 
+		            overlay.style.top = dangerY + "px";
+		            overlay.style.display = 'block';                
+		            overlay.style.zIndex = 1;                		   				
+				}
+			  }
+							
+            });			
+        });
+		
+		
+		function resetOverlays() {
+			document.getElementById("overlay21_1").zIndex = 0; document.getElementById("overlay21_1").style.display = 'none';  
+			document.getElementById("overlay21_2").zIndex = 0; document.getElementById("overlay21_2").style.display = 'none'; 
+			document.getElementById("overlay21_3").zIndex = 0; document.getElementById("overlay21_3").style.display = 'none'; 
+
+			document.getElementById("overlay22_1").zIndex = 0; document.getElementById("overlay22_1").style.display = 'none';  
+			document.getElementById("overlay22_2").zIndex = 0; document.getElementById("overlay22_2").style.display = 'none'; 
+			document.getElementById("overlay22_3").zIndex = 0; document.getElementById("overlay22_3").style.display = 'none'; 
+
+			document.getElementById("overlay23_1").zIndex = 0; document.getElementById("overlay23_1").style.display = 'none';  
+			document.getElementById("overlay23_2").zIndex = 0; document.getElementById("overlay23_2").style.display = 'none'; 
+			document.getElementById("overlay23_3").zIndex = 0; document.getElementById("overlay23_3").style.display = 'none'; 
+
+
+			document.getElementById("coupler23").zIndex = 0; document.getElementById("coupler23").style.display = 'none'; 
+			document.getElementById("coupler22").zIndex = 0; document.getElementById("coupler22").style.display = 'none'; 
+			document.getElementById("coupler21").zIndex = 0; document.getElementById("coupler21").style.display = 'none'; 
+
+			document.getElementById("danger").zIndex = 0; document.getElementById("danger").style.display = 'none'; 
+
+
+		}		
+		
+		
+    </script>
+
+</body>
+</html>
+
