@@ -1,0 +1,124 @@
+        #container {
+            position: relative;
+        }
+
+        .interactive-image {
+            position: relative;
+            //cursor: pointer;
+            top: 0;
+            left: 0;			
+        }
+
+        #coordinates {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background-color: white;
+            // padding: 5px;
+            // border: 1px solid #ccc;
+        }	
+		
+        .image {
+            position: absolute;
+            display: none; 
+        }
+		
+        #emptyRectangle {
+            position: absolute;
+            display: none;
+            border: 5px dashed black; /* Colore e stile del bordo */
+            width: 42px; /* Larghezza del rettangolo */
+            height: 55px; /* Altezza del rettangolo */
+        }	
+		
+		#gearLabel	{
+            position: absolute;
+            top: 150px;
+            left: 530px;
+            background-color: white;
+            // padding: 5px;
+            // border: 1px solid #ccc;
+        }	
+		
+		#gearChainIce	{
+            position: absolute;
+            top: 630px;
+            left: 850px;
+            background-color: white;
+            // padding: 5px;
+            // border: 1px solid #ccc;
+        }	
+		
+		#gearChainEle	{
+            position: absolute;
+            top: 650px;
+            left: 850px;
+            background-color: white;
+            // padding: 5px;
+            // border: 1px solid #ccc;
+        }	
+		
+		#gearChainCombo	{
+            position: absolute;
+            top: 670px;
+            left: 850px;
+            background-color: white;
+            // padding: 5px;
+            // border: 1px solid #ccc;
+        }	
+		
+
+		#gearChainIceLabel	{
+            position: absolute;
+            top: 630px;
+            left: 650px;
+            background-color: white;
+            // padding: 5px;
+            // border: 1px solid #ccc;
+        }	
+		
+		#gearChainEleLabel	{
+            position: absolute;
+            top: 650px;
+            left: 650px;
+            background-color: white;
+            // padding: 5px;
+            // border: 1px solid #ccc;
+        }	
+		
+		#gearChainComboLabel	{
+            position: absolute;
+            top: 670px;
+            left: 650px;
+            background-color: white;
+            // padding: 5px;
+            // border: 1px solid #ccc;
+        }
+		
+		#gearChainIceRatio	{			
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            background-color: white;
+            // padding: 5px;
+            // border: 1px solid #ccc;
+        }	
+
+		#gearChainEleRatio	{			
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            background-color: white;
+            // padding: 5px;
+            // border: 1px solid #ccc;
+        }	
+
+		#gearChainComboRatio	{			
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            background-color: white;
+            // padding: 5px;
+            // border: 1px solid #ccc;
+        }	
+
