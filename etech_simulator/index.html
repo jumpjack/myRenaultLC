@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Il cambio della Renault Captur E-Tech</title>
+	<link rel="stylesheet" href="styles.css">
+	<script src="gearsDefinitions.js"></script>
+</head>
+<body>
+<h1>Il cambio della Renault Captur E-Tech</h1>
+
+Clicca sui riquadri in basso per visualizzare la marcia corrispondente.<br><br>
+<!--Fix ICE 5: <input type="checkbox" id="chkIce5" name="chkIce5"><br>-->
+<!--Status:<span id="status" name="status">-</span><br>-->
+    <div id="container">
+        <img id="base" src="all-new-empty2.png" alt="Base Image" class="interactive-image">
+		<img src="21_1.jpg" alt="Overlay Image" class="image" id="overlay21_1">
+		<img src="21_2.jpg" alt="Overlay Image" class="image" id="overlay21_2">
+		<img src="21_3.jpg" alt="Overlay Image" class="image" id="overlay21_3">
+
+		<img src="22_1.jpg" alt="Overlay Image" class="image" id="overlay22_1">
+		<img src="22_2.jpg" alt="Overlay Image" class="image" id="overlay22_2">
+		<img src="22_3.jpg" alt="Overlay Image" class="image" id="overlay22_3">
+
+		<img src="23_1.jpg" alt="Overlay Image" class="image" id="overlay23_1">
+		<img src="23_2.jpg" alt="Overlay Image" class="image" id="overlay23_2">
+		<img src="23_3.jpg" alt="Overlay Image" class="image" id="overlay23_3">
+		
+
+		<img src="coupler.jpg" alt="Overlay Image" class="image" id="coupler23">
+		<img src="coupler.jpg" alt="Overlay Image" class="image" id="coupler22">
+		<img src="coupler.jpg" alt="Overlay Image" class="image" id="coupler21">
+
+		<img src="danger.jpg" alt="Overlay Image" class="image" id="danger">
+
+		<img src="ICER5-fixer.png" alt="Overlay Image" class="image" id="ice5">
+
+		<img src="flux.png" alt="Overlay Image" class="image" id="flux_base">
+		<img src="flux-batt-wheels-bidir.png" alt="Overlay Image" class="image" id="flux_bat_wheels">
+		<img src="flux-ICE-Bat-alone.png" alt="Overlay Image" class="image" id="flux_ICE_bat">
+		<img src="flux-ICE-wheels-alone.png" alt="Overlay Image" class="image" id="flux_ICE_wheels">
+		
+        <div id="emptyRectangle"></div> <!-- Aggiunto il rettangolo vuoto -->
+
+		<div id="gearLabel">Gear name: -</div>		
+
+		<div id="gearChainIceLabel">Internal Combustion Engine: </div>		
+		<div id="gearChainEleLabel">Electric Motor: </div>		
+		<div id="gearChainComboLabel">Combo: </div>		
+
+		<div id="gearChainIce">-</div>		
+		<div id="gearChainEle">-</div>		
+		<div id="gearChainCombo">-</div>		
+
+		<div id="gearChainIceRatio">ICE Ratio: -</div>		
+		<div id="gearChainEleRatio">EV Ratio: -</div>		
+		<div id="gearChainComboRatio">Combo Ratio: -</div>		
+    </div>
+	
+	<br>
+	<a href="https://jumpjack.wordpress.com/2021/01/17/renault-captur-plugin-etech-le-marce-segrete-e-proibite/">Articolo sulle marce dell'E-Tech</a> e <a href="https://jumpjack.wordpress.com/?s=etech">tutti gli articoli sull'E-tech.</a><br>
+	<a href="https://www.youtube.com/watch?v=J1EgIr7Mn8s">Video-spiegazione delle marce (Renault official)</a><br>
+	<a href="https://patentimages.storage.googleapis.com/05/8b/c7/1ae1a1b0ba89a0/US10479188.pdf">Brevetto US10479188</a> della Renault sul cambio/motore E-tech,by Nicolas Fremau.<br>
+    <script>
+/*
+		const coupler21x = [210, 200, 227 ]; coupler21y = 282;
+		const coupler22x = [285, 270, 297 ]; coupler22y = 205;
+		const coupler23x = [277, 247, 297 ]; coupler23y = 129;
+*/
+		const coupler21x = [200, 210, 227 ]; coupler21y = 282;
+		const coupler22x = [270, 285, 297 ]; coupler22y = 205;
+		const coupler23x = [247, 277, 297 ]; coupler23y = 129;
+		const dangerX = 700; dangerY = 250;
+		const BAD_GEAR_FLAG = "unused";
+		const BAD_GEAR_FLAG2 = "LOOP";
+		var ICE5_FACTOR = 1.6;
+		var fixICE5 = 0;
+		
+        const gridSize = { rows: 3, columns: 9 };
+        const cellSize = { width: 61, height: 87 };
+        const baseClickArea = { startX: 40, startY: 480, endX: 574, endY: 715 };
+        const emptyRectangle = document.getElementById('emptyRectangle');
+        const gearLabel = document.getElementById('gearLabel');
+        const gearChainIce = document.getElementById('gearChainIce');
+        const gearChainEle = document.getElementById('gearChainEle');
+        const gearChainCombo = document.getElementById('gearChainCombo');
+        const gearChainIceRatio = document.getElementById('gearChainIceRatio');
+        const gearChainEleRatio = document.getElementById('gearChainEleRatio');
+        const gearChainComboRatio = document.getElementById('gearChainComboRatio');
+        const gearChainIceLabel = document.getElementById('gearChainIceLabel');
+        const gearChainEleLabel = document.getElementById('gearChainEleLabel');
+        const gearChainComboLabel = document.getElementById('gearChainComboLabel');
+		
+        const container = document.getElementById('container');
+        const baseImage = document.getElementById('base');
+		var c21 = 1;
+		var c22 = 1;
+		var c23 = 1;
+		combo = 0;
+		var row;
+		var columnRaw;
+
+        document.addEventListener('DOMContentLoaded', function () {
+
+            baseImage.addEventListener('mousemove', function (event) {
+                const rect = baseImage.getBoundingClientRect();
+				
+                // Calcola le coordinate assolute
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+
+                // Calcola le coordinate in termini di riga e colonna
+                if (
+                    x >= baseClickArea.startX && x <= baseClickArea.endX &&
+                    y >= baseClickArea.startY && y <= baseClickArea.endY
+                ) {
+                    row = Math.floor((y - baseClickArea.startY) / cellSize.height) + 1;
+                    columnRaw = Math.floor((x - baseClickArea.startX) / cellSize.width) + 1;
+					c21 = Math.ceil(columnRaw / 3);
+					c23 = columnRaw - 3*(c21-1)
+					c22 = row;
+					
+					if (c21 === 1) {
+						c21 = 2
+					} else if (c21 === 2) {
+						c21 = 1;
+					}
+
+					
+					if (c22 === 1) {
+						c22 = 2
+					} else if (c22 === 2) {
+						c22 = 1;
+					}
+
+					
+					if (c23 === 1) {
+						c23 = 2
+					} else if (c23 === 2) {
+						c23 = 1;
+					}
+
+					combo = all[c21-1][c22-1][c23-1];
+					
+//document.getElementById("status").innerHTML = "C23, C22, C21 - " + c23 + "," + c22 + "," + c21;										
+					validClick=true;
+                } else {
+					validClick=false
+				}
+				
+				
+            });
+			
+/*			
+			chkIce5.addEventListener('click', function () {
+console.log("Prima:",c21,c22,c23);			
+				if (chkIce5.checked) {
+		            var overlayId = "ice5";		
+		            var overlay = document.getElementById(overlayId);		
+		            overlay.style.left = `0px`;
+		            overlay.style.top = `0px`;
+		            overlay.style.display = 'block';                
+		            //overlay.style.zIndex = 1;
+					fixICE5 = 1;
+console.log("Dopo1:",c21,c22,c23);			
+					switchGear();
+				} else {
+		            var overlayId = "ice5";		
+		            var overlay = document.getElementById(overlayId);		
+		            overlay.style.left = `0px`;
+		            overlay.style.top = `0px`;
+		            overlay.style.display = 'none';                
+		            //overlay.style.zIndex = 1;
+					fixICE5 = 0;
+console.log("Dopo2:",c21,c22,c23);			
+					switchGear();
+				}   
+			});
+*/			
+			
+            baseImage.addEventListener('click', function () {
+
+                const rect = baseImage.getBoundingClientRect();
+				
+                // Calcola le coordinate assolute
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+
+                // Calcola le coordinate in termini di riga e colonna
+                if (
+                    x >= baseClickArea.startX && x <= baseClickArea.endX &&
+                    y >= baseClickArea.startY && y <= baseClickArea.endY
+                ) {
+                    row = Math.floor((y - baseClickArea.startY) / cellSize.height) + 1;
+                    columnRaw = Math.floor((x - baseClickArea.startX) / cellSize.width) + 1;
+					c21 = Math.ceil(columnRaw / 3);
+					c23 = columnRaw - 3*(c21-1)
+					c22 = row;
+
+					if (c21 === 1) {
+						c21 = 2
+					} else if (c21 === 2) {
+						c21 = 1;
+					}
+
+					
+					if (c22 === 1) {
+						c22 = 2
+					} else if (c22 === 2) {
+						c22 = 1;
+					}
+
+					
+					if (c23 === 1) {
+						c23 = 2
+					} else if (c23 === 2) {
+						c23 = 1;
+					}
+					
+					combo = all[c21-1][c22-1][c23-1];
+										
+					validClick=true;
+                } else {
+					validClick=false
+				}
+//document.getElementById("status").innerHTML = x + "," + y + " - " + c21 + "," + c22 + "," + c23;
+							
+                if (!validClick) return	
+				switchGear();	
+			});
+				
+        });
+		
+
+		function switchGear() {	
+			resetOverlays();	
+//console.log("C23, C22, C21:", c23, c22, c21, combo);	
+					if (c21 === 1) {
+						c21 = 2
+					} else if (c21 === 2) {
+						c21 = 1;
+					}
+
+					
+					if (c22 === 1) {
+						c22 = 2
+					} else if (c22 === 2) {
+						c22 = 1;
+					}
+
+					
+					if (c23 === 1) {
+						c23 = 2
+					} else if (c23 === 2) {
+						c23 = 1;
+					}
+										
+			gearLabelText = gearsNames[c21-1][c22-1][c23-1] 
+			gearChainIceText = meshedGears[c21-1][c22-1][c23-1].T;
+			gearChainEleText = meshedGears[c21-1][c22-1][c23-1].E;
+			gearChainComboText = meshedGears[c21-1][c22-1][c23-1].Combo;
+
+			gearLabel.innerHTML = gearLabelText + " (" + all[c21-1][c22-1][c23-1][0] + all[c21-1][c22-1][c23-1][1] + all[c21-1][c22-1][c23-1][2] + ")"; // debug;
+			gearChainIce.innerHTML = gearChainIceText;
+			gearChainEle.innerHTML = gearChainEleText;
+			gearChainCombo.innerHTML = gearChainComboText;
+
+					if (c21 === 1) {
+						c21 = 2
+					} else if (c21 === 2) {
+						c21 = 1;
+					}
+
+					
+					if (c22 === 1) {
+						c22 = 2
+					} else if (c22 === 2) {
+						c22 = 1;
+					}
+
+					
+					if (c23 === 1) {
+						c23 = 2
+					} else if (c23 === 2) {
+						c23 = 1;
+					}
+					
+										
+            var overlayId = "overlay21_" + (c21);//combo[2];		
+            var overlay = document.getElementById(overlayId);		
+            overlay.style.left = `653px`;
+            overlay.style.top = `461px`;
+            overlay.style.display = 'block';                
+            overlay.style.zIndex = 1;                   
+//console.log("Enabling ", overlayId);
+            overlayId = "coupler21";		
+            overlay = document.getElementById(overlayId);		
+            overlay.style.left = coupler21x[combo[2]-1] + "px"; //`247px`; 
+            overlay.style.top = coupler21y + "px";
+            overlay.style.display = 'block';                
+            overlay.style.zIndex = 1;                		   
+
+            overlayId = "overlay22_" + (c22);//combo[1];
+            overlay = document.getElementById(overlayId);
+            overlay.style.left = `802px`;
+            overlay.style.top = `241px`;
+            overlay.style.display = 'block';                
+            overlay.style.zIndex = 1;                  
+//console.log("Enabling ", overlayId);
+			
+            overlayId = "coupler22";		
+            overlay = document.getElementById(overlayId);		
+            overlay.style.left = coupler22x[combo[1]-1] + "px"; //`247px`; 
+            overlay.style.top = coupler22y + "px";
+            overlay.style.display = 'block';                
+            overlay.style.zIndex = 1;                		   
+
+            overlayId = "overlay23_" + (c23);//combo[0];
+            overlay = document.getElementById(overlayId);
+            overlay.style.left = `805px`;
+            overlay.style.top = `77px`;
+            overlay.style.display = 'block';                
+            overlay.style.zIndex = 1;              
+//console.log("Enabling ", overlayId);
+			
+            overlayId = "coupler23";		
+            overlay = document.getElementById(overlayId);		
+            overlay.style.left = coupler23x[combo[0]-1] + "px"; //`247px`; 
+            overlay.style.top = coupler23y + "px";
+            overlay.style.display = 'block';                
+            overlay.style.zIndex = 1;                		   
+
+
+			emptyRectangle.style.top = baseClickArea.startY + cellSize.height * (row-1) + "px"; //`461px`;
+			emptyRectangle.style.left = baseClickArea.startX + cellSize.width * (columnRaw-1) + "px"; //`40px`;
+			emptyRectangle.style.display = 'block';
+		  
+		   ///// Show danger icon for forbidden combinations
+			for (var i = 0; i < forbidden.length; i++) {			  
+				if ((c23/*combo[0]*/ === forbidden[i][0]) && (c22/*combo[1]*/ === forbidden[i][1]) && (c21/*combo[2]*/ === forbidden[i][2])) {
+			        overlayId = "danger";		
+			        overlay = document.getElementById(overlayId);		
+			        overlay.style.left = dangerX + "px"; //`247px`; 
+			        overlay.style.top = dangerY + "px";
+			        overlay.style.display = 'block';                
+			        overlay.style.zIndex = 1;                		   				
+				}
+		  	}
+		  
+			var couples = extractCouples(gearChainIceText);
+			var ratio = calcRatio(couples, "ICE - " + gearLabelText);
+//console.log("iceRATIO=",couples,ratio);	
+			gearChainIceCouples = couples;			  
+			gearChainIceRatioResult = ratio;			  
+			if ((gearChainIceText.indexOf(BAD_GEAR_FLAG) < 0)  && (gearChainIceText.indexOf(BAD_GEAR_FLAG2) < 0)) {
+				gearChainIceRatio.innerHTML = "ICE Ratio = "+ratio;
+			} else {
+				gearChainIceRatio.innerHTML = "ICE Ratio = n/a";
+			}	
+
+			if (gearChainComboText.indexOf("Pure EV") >= 0) {
+				gearChainIceRatio.innerHTML = "ICE Ratio = n/a";
+			}	
+
+			
+							
+			couples = extractCouples(gearChainEleText);
+			ratio = calcRatio(couples,"ELE - " + gearLabelText);
+//console.log("eleRATIO=",couples,ratio);					  
+			gearChainEleCouples = couples;			  
+			gearChainEleRatioResult = ratio;			  
+			if ((gearChainEleText.indexOf(BAD_GEAR_FLAG) < 0)  && (gearChainEleText.indexOf(BAD_GEAR_FLAG2) < 0)) {
+				gearChainEleRatio.innerHTML = "EV Ratio = "+ratio;
+			} else {
+				gearChainEleRatio.innerHTML = "EV Ratio = n/a";
+			}	
+
+			if (gearChainComboText.indexOf("Pure ICE") >= 0) {
+				gearChainEleRatio.innerHTML = "EV ratio = n/a";
+			}	
+					
+										
+			couples = extractCouples(gearChainComboText);
+			ratio = calcRatio(couples,"COMBO - " + gearLabelText);
+//console.log("comboRATIO=",couples,ratio);					  
+			gearChainComboCouples = couples;			  
+			gearChainComboRatioResult = ratio;			  
+			if ((gearChainComboText.indexOf(BAD_GEAR_FLAG) < 0)  && (gearChainComboText.indexOf(BAD_GEAR_FLAG2) < 0)) {
+				gearChainComboRatio.innerHTML = "Combo Ratio = "+ratio;
+			} else {
+				gearChainComboRatio.innerHTML = "Combo Ratio = n/a";
+			}	
+
+			if ((gearChainComboText.indexOf("Parallel") >= 0)  || (gearChainComboText.indexOf("Pure ICE") >= 0)  || (gearChainComboText.indexOf("Pure EV") >= 0)){
+				gearChainComboRatio.innerHTML = "Combo Ratio = n/a";
+			}	
+//console.log("==============");			
+				
+
+			fluxFlags.ICE_bat = false; 
+			fluxFlags.EV_bat = true; // In prima battuta vero, a meno che EV non sia scollegato (v.sotto)
+			fluxFlags.ICE_Wheels = false;
+	
+//console.log(gearLabelText);		
+//console.log("==============");						
+			if (gearLabelText.indexOf("ICE") >= 0 ) {
+				fluxFlags.ICE_bat = true;
+				overlayICEbat.style.display = "block";	
+			} else {
+				fluxFlags.ICE_bat = false;
+				overlayICEbat.style.display = "none";	
+			}
+
+			if (gearLabelText.indexOf("Ev") >= 0 ) {
+				fluxFlags.EV_bat = true;
+				overlayEVbat.style.display = "block";	
+			} else {
+				fluxFlags.EV_bat = false;
+				overlayEVbat.style.display = "none";	
+			}
+										
+			if ((c22 === 2) || (c22 === 3) || (c23 === 3)) {
+				if (gearLabelText.indexOf("Forbidden")<0) {
+					overlayICEwheels.style.display = "block";	
+				} else {
+					overlayICEwheels.style.display = "none";
+				}
+			} else {
+				overlayICEwheels.style.display = "none";	
+			}
+
+				if (gearLabelText.indexOf("Charge") >=0) {
+					overlayICEbat.style.display = "block";	
+				} else {
+					//overlayICEbat.style.display = "none";
+				}	
+			return {
+				"gearLabel" :  gearLabelText,	
+				"gearChainIceLabel" :	gearChainIceText,		
+				"gearChainEleLabel" :	gearChainEleText,
+				"gearChainComboLabel" : gearChainComboText,
+				
+				"gearChainEleRatio" : gearChainEleRatioResult,
+				"gearChainIceRatio" : gearChainIceRatioResult,
+				"gearChainComboRatio" : gearChainComboRatioResult,
+				
+				"gearChainEleCouples" : gearChainEleCouples,
+				"gearChainIceCouples" : gearChainIceCouples,
+				"gearChainComboCouples" : gearChainComboCouples,
+				}			
+          };	
+			
+			
+					
+		function resetOverlays() {
+			document.getElementById("overlay21_1").zIndex = 0; document.getElementById("overlay21_1").style.display = 'none';  
+			document.getElementById("overlay21_2").zIndex = 0; document.getElementById("overlay21_2").style.display = 'none'; 
+			document.getElementById("overlay21_3").zIndex = 0; document.getElementById("overlay21_3").style.display = 'none'; 
+
+			document.getElementById("overlay22_1").zIndex = 0; document.getElementById("overlay22_1").style.display = 'none';  
+			document.getElementById("overlay22_2").zIndex = 0; document.getElementById("overlay22_2").style.display = 'none'; 
+			document.getElementById("overlay22_3").zIndex = 0; document.getElementById("overlay22_3").style.display = 'none'; 
+
+			document.getElementById("overlay23_1").zIndex = 0; document.getElementById("overlay23_1").style.display = 'none';  
+			document.getElementById("overlay23_2").zIndex = 0; document.getElementById("overlay23_2").style.display = 'none'; 
+			document.getElementById("overlay23_3").zIndex = 0; document.getElementById("overlay23_3").style.display = 'none'; 
+
+
+			document.getElementById("coupler23").zIndex = 0; document.getElementById("coupler23").style.display = 'none'; 
+			document.getElementById("coupler22").zIndex = 0; document.getElementById("coupler22").style.display = 'none'; 
+			document.getElementById("coupler21").zIndex = 0; document.getElementById("coupler21").style.display = 'none'; 
+
+			document.getElementById("danger").zIndex = 0; document.getElementById("danger").style.display = 'none'; 
+
+
+		}		
+		
+	function extractCouples(inputString) {
+		var result = [];
+
+		// Definisci l'espressione regolare per cercare le coppie di numeri
+		const regex = /\b(\d+:\d+)\b/g;
+
+		// Esegui il match della stringa con l'espressione regolare
+		const matches = inputString.match(regex);
+
+		// Stampa le coppie di numeri estratte
+		if (matches) {
+		  matches.forEach(match => {
+			result.push(match)
+		  });
+		} else {
+//		  console.log("Nessuna coppia di numeri trovata nella stringa.");
+		}
+		return result;
+	}			
+
+	function calcRatio(pairsArray, gearName) {
+		// Calcola il prodotto dei rapporti tra gli elementi dell'array "wheels" corrispondenti alle coppie
+		const productOfRatios = pairsArray.reduce((result, pair) => {
+		  [index1, index2] = pair.split(':').map(Number);
+		  
+		  	radius1 = wheels[index1].radius
+		  	radius2 = wheels[index2].radius
+		  ///// Fix ICE5:
+		  if (fixICE5 ===1) {
+		  	if (index1 === 18) radius1 = wheels[18].radius * ICE5_FACTOR;
+		  	if (index1 === 19) radius1 = wheels[19].radius * ICE5_FACTOR;
+		  	if (index1 === 20) radius1 = wheels[20].radius * ICE5_FACTOR;
+
+		  	if (index2 === 18) radius2 = wheels[18].radius * ICE5_FACTOR;
+		  	if (index2 === 19) radius2 = wheels[19].radius * ICE5_FACTOR;
+		  	if (index2 === 20) radius2 = wheels[20].radius * ICE5_FACTOR;
+		  } else {
+		  	//radius1 = wheels[index1].radius;
+		  	//radius2 = wheels[index2].radius;
+		  }
+		  /////
+		  
+		  ratio = radius1 / radius2;
+		  
+//console.log("ICE5fix:" + fixICE5 + " - " +  index1+ "/"+ index2 + " = " +  wheels[index1].radius + "/"+ wheels[index2].radius	+" = "+ wheels[index1].radius / wheels[index2].radius);	  
+//console.log(index1+ "/"+ index2 + " = " +  radius1 + "/"+ radius2	+" = "+ ratio);	  
+//console.log("-------------");
+		  return result * ratio;
+		}, 1);
+
+//console.log(gearName, productOfRatios.toFixed(2));
+		return productOfRatios.toFixed(2);
+	}	
+	
+	wc = 0;
+	wheels.forEach((w) => {
+		w.radius = w.pixelAbs - wheelsAxle;
+		if(w.radius >0 ) console.log("Wheel ", wc, " = ", w.radius , " pixels.");
+		wc++;	
+	});
+	
+	gearChainIceRatio.style.left = gearLabel.offsetLeft + "px";		  
+	gearChainIceRatio.style.top = gearLabel.offsetTop +  gearLabel.offsetHeight + "px";		  
+	gearChainEleRatio.style.left = gearLabel.offsetLeft + "px";		  
+	gearChainEleRatio.style.top = gearChainIceRatio.offsetTop +  gearChainIceRatio.offsetHeight + "px";
+	gearChainComboRatio.style.left = gearLabel.offsetLeft + "px";		  
+	gearChainComboRatio.style.top = gearChainEleRatio.offsetTop +  gearChainEleRatio.offsetHeight + "px";
+	
+
+//// debug
+//wheels[18].radius = wheels[18].radius * 1.6; 
+//wheels[19].radius = wheels[19].radius * 1.6; 
+//wheels[20].radius = wheels[20].radius * 1.6; 
+
+overlayId = "flux_base";		
+overlay = document.getElementById(overlayId);		
+overlay.style.left = `30px`;
+overlay.style.top = `330px`;
+overlay.style.width = "130px";
+overlay.style.display = 'block';                
+
+overlayId = "flux_bat_wheels";		
+overlayEVbat = document.getElementById(overlayId);		
+overlayEVbat.style.left = `50px`;
+overlayEVbat.style.top = `373px`;
+overlayEVbat.style.width = "30px";
+overlayEVbat.style.display = 'none';                
+
+overlayId = "flux_ICE_wheels";		
+overlayICEwheels = document.getElementById(overlayId);		
+overlayICEwheels.style.left = `117px`;
+overlayICEwheels.style.top = `373px`;
+overlayICEwheels.style.width = "30px";
+overlayICEwheels.style.display = 'none';                
+
+overlayId = "flux_ICE_bat";		
+overlayICEbat = document.getElementById(overlayId);		
+overlayICEbat.style.left = `80px`;
+overlayICEbat.style.top = `341px`;
+overlayICEbat.style.width = "40px";
+overlayICEbat.style.display = 'none';                
+
+
+function printGears(showForbidden, showLegal) {
+	counter = 1;
+	for (c21 = 1; c21 <= 3; c21++) {
+	    for (c22 = 1; c22 <= 3; c22++) {
+	        for (c23 = 1; c23 <= 3; c23++) {
+				combo = all[c21-1][c22-1][c23-1];
+				result = switchGear();
+			
+				if (result.gearChainComboLabel.indexOf("ERR")<0) {	 // VALID
+					if (showLegal) {			
+						console.log("COUNT:", counter);
+						console.log("C23, C22, C21:", c23,c22,c21);
+						console.log("Gear name: ", result.gearLabel);		
+						console.log("EV    = ", result.gearChainEleCouples, ", ", result.gearChainEleRatio, ", ",  result.gearChainEleLabel.split("<b>").join("").split("</b>").join(""));		
+						console.log("ICE   = ", result.gearChainIceCouples, ", ",  result.gearChainIceRatio, ", ",  result.gearChainIceLabel.split("<b>").join("").split("</b>").join(""));		
+						console.log("Combo = ", result.gearChainComboCouples, ", ",  result.gearChainComboRatio, ", ",   result.gearChainComboLabel.split("<b>").join("").split("</b>").join(""));	
+						console.log("==========");
+						console.log("");	
+						counter++;
+					} else {
+					// don't show
+					}
+				} else {	// ERR					
+					if (showForbidden) {
+						console.log("COUNT:", counter);
+						console.log("C23, C22, C21:", c23,c22,c21);
+						console.log("Gear name: ", result.gearLabel);		
+						console.log("EV    = ", result.gearChainEleCouples, ", ", result.gearChainEleRatio, ", ",  result.gearChainEleLabel.split("<b>").join("").split("</b>").join(""));		
+						console.log("ICE   = ", result.gearChainIceCouples, ", ",  result.gearChainIceRatio, ", ",  result.gearChainIceLabel.split("<b>").join("").split("</b>").join(""));		
+						console.log("Combo = ", result.gearChainComboCouples, ", ",  result.gearChainComboRatio, ", ",   result.gearChainComboLabel.split("<b>").join("").split("</b>").join(""));	
+						console.log("==========");
+						console.log("");	
+						counter++;	
+					} else {
+					// don't show 
+					}			
+				}
+
+	        }
+	    }
+	}
+}
+    </script>
+	<br>
+	<br>
+Versione 1.0.0 - 09/02/2024
+</body>
+</html>
+
