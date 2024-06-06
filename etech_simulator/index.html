@@ -14,7 +14,7 @@ Clicca sui riquadri in basso per visualizzare la marcia corrispondente.<br><br>
 <!--Fix ICE 5: <input type="checkbox" id="chkIce5" name="chkIce5"><br>-->
 <!--Status:<span id="status" name="status">-</span><br>-->
     <div id="container">
-        <img id="base" src="all-new-empty2.png" alt="Base Image" class="interactive-image">
+        <img id="base" src="all-new-empty3.png" alt="Base Image" class="interactive-image">
 		<img src="21_1.jpg" alt="Overlay Image" class="image" id="overlay21_1">
 		<img src="21_2.jpg" alt="Overlay Image" class="image" id="overlay21_2">
 		<img src="21_3.jpg" alt="Overlay Image" class="image" id="overlay21_3">
@@ -535,9 +535,16 @@ console.log("Dopo2:",c21,c22,c23);
 	wc = 0;
 	wheels.forEach((w) => {
 		w.radius = w.pixelAbs - wheelsAxle;
-		if(w.radius >0 ) console.log("Wheel ", wc, " = ", w.radius , " pixels.");
+		if(w.radius >0 ) console.log("Wheel ", wc, " = ", w.radius," pixels.");
 		wc++;	
 	});
+	console.log("wheels[9].radius+wheels[11].radius=",wheels[9].radius+wheels[11].radius);
+	console.log("wheels[10].radius+wheels[12].radius=",wheels[10].radius+wheels[12].radius);
+	console.log("wheels[15].radius+wheels[13].radius=",wheels[15].radius+wheels[13].radius);
+	console.log("wheels[16].radius+wheels[14].radius=",wheels[16].radius+wheels[14].radius);
+	console.log("wheels[20].radius+wheels[10].radius=",wheels[20].radius+wheels[10].radius);
+	console.log("wheels[19].radius+wheels[16].radius=",wheels[19].radius+wheels[16].radius);
+	console.log("wheels[18].radius+wheels[17].radius=",wheels[18].radius+wheels[17].radius);
 	
 	gearChainIceRatio.style.left = gearLabel.offsetLeft + "px";		  
 	gearChainIceRatio.style.top = gearLabel.offsetTop +  gearLabel.offsetHeight + "px";		  
