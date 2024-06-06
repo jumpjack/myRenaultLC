@@ -57,13 +57,19 @@ Clicca sui riquadri in basso per visualizzare la marcia corrispondente.<br><br>
 		<div id="gearChainEleRatio">EV Ratio: -</div>		
 		<div id="gearChainComboRatio">Combo Ratio: -</div>		
     </div>
-	
+<input type="checkbox" id="etechCheckbox" name="etechCheckbox" onchange="toggleImage()"> <label for="etechCheckbox">Show E-tech 200</label><br>
+
 	<br>
-	<a href="https://jumpjack.wordpress.com/2021/01/17/renault-captur-plugin-etech-le-marce-segrete-e-proibite/">Articolo sulle marce dell'E-Tech</a> e <a href="https://jumpjack.wordpress.com/?s=etech">tutti gli articoli sull'E-tech.</a><br>
+	<a href="https://jumpjack.wordpress.com/2021/01/17/renault-captur-plugin-etech-le-marce-segrete-e-proibite/">Vecchio articolo (2021) sulle marce del primo E-Tech</a> e <a href="https://jumpjack.wordpress.com/?s=etech">tutti gli articoli sull'E-tech.</a><br>
+	<a href="https://jumpjack.wordpress.com/2024/02/09/nuova-versione-del-motore-renault-e-tech-ibrido-letech-200/">Nuovo articolo (2024) sulle marce del primo E-Tech</a><br>
+	<a href="https://jumpjack.wordpress.com">Nuovo articolo (2024) sul nuovo motore etech 200 (in preparazione)</a><br>
 	<a href="https://www.youtube.com/watch?v=J1EgIr7Mn8s">Video-spiegazione delle marce (Renault official)</a><br>
-	<a href="https://patentimages.storage.googleapis.com/05/8b/c7/1ae1a1b0ba89a0/US10479188.pdf">Brevetto US10479188</a> della Renault sul cambio/motore E-tech,by Nicolas Fremau.<br>
+	<a href="https://patents.google.com/patent/FR3022495A1">Brevetto Renault FR3022495A1 del 2014 del primo motore E-Tech</a><br>
+	<a href="https://patentimages.storage.googleapis.com/05/8b/c7/1ae1a1b0ba89a0/US10479188.pdf">Brevetto US10479188</a> della Renault sul cprimo motore E-tech,by Nicolas Fremau (USA)<br>
+	<a href="https://patents.google.com/patent/WO2019219294A1">Brevetto WO2019219294A1</a> Renault/Nissan del 2018 del <a href="https://it.media.renaultgroup.com/alle-origini-di-renault-e-tech/">nuovo motore E-tech 200 / Etech-M</a><br>
     <script>
 
+	// V.1.1.0: Aggetto switch per immagine etech 200
 	// V.1.0.1: Alcuni ritocchi all'immagine di fondo
 /*
 		const coupler21x = [210, 200, 227 ]; coupler21y = 282;
@@ -181,7 +187,7 @@ console.log("Dopo2:",c21,c22,c23);
 				}   
 			});
 */			
-			
+
             baseImage.addEventListener('click', function () {
 
                 const rect = baseImage.getBoundingClientRect();
@@ -310,7 +316,7 @@ console.log("Dopo2:",c21,c22,c23);
             overlay.style.left = `802px`;
             overlay.style.top = `241px`;
             overlay.style.display = 'block';                
-            overlay.style.zIndex = 1;                  
+            overlay.style.zIndex = 1;
 //console.log("Enabling ", overlayId);
 			
             overlayId = "coupler22";		
@@ -525,7 +531,7 @@ console.log("Dopo2:",c21,c22,c23);
 		  ratio = radius1 / radius2;
 		  
 //console.log("ICE5fix:" + fixICE5 + " - " +  index1+ "/"+ index2 + " = " +  wheels[index1].radius + "/"+ wheels[index2].radius	+" = "+ wheels[index1].radius / wheels[index2].radius);	  
-//console.log(index1+ "/"+ index2 + " = " +  radius1 + "/"+ radius2	+" = "+ ratio);	  
+//console.log(index1+ "/"+ index2 + " = " +  radius1 + "/"+ radius2	+" = "+ ratio);
 //console.log("-------------");
 		  return result * ratio;
 		}, 1);
@@ -568,7 +574,7 @@ overlay.style.top = `330px`;
 overlay.style.width = "130px";
 overlay.style.display = 'block';                
 
-overlayId = "flux_bat_wheels";		
+overlayId = "flux_bat_wheels";
 overlayEVbat = document.getElementById(overlayId);		
 overlayEVbat.style.left = `50px`;
 overlayEVbat.style.top = `373px`;
@@ -632,10 +638,21 @@ function printGears(showForbidden, showLegal) {
 	    }
 	}
 }
+
+function toggleImage() {
+  var checkbox = document.getElementById("etechCheckbox");
+  var image = document.getElementById("base");
+
+  if (checkbox.checked) {
+    image.src = "all-new-empty3-etech200.png";
+  } else {
+    image.src = "all-new-empty3.png";
+  }
+}
     </script>
 	<br>
 	<br>
-Versione 1.0.1 - 06/06/2024
+Versione 1.1.0 - 06/06/2024
 </body>
 </html>
 
