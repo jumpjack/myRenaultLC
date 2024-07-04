@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>dexstrings Analyzer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        #output {
+            width: 100%;
+            height: 300px;
+            white-space: pre;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+        button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>dexstrings Analyzer</h1>
+	v.1.0.0<br>
+	<br>
+
+	ChatGPT port to Javascript from <a href="https://github.com/hugo-glez/dexstrings">original C source</a> by <a href="https://github.com/hugo-glez/">Hugo Gonzalez</a><br>
+	You have to manually extract a .dex file from .apk files (which is just a renamed .zip file) and load it into this page to see all human-readable strings.<br>
+    <input type="file" id="dexFile" accept=".dex">
+    <br><br>
+    <button onclick="analyzeDex()">Analyze .dex File</button>
+    <textarea id="output" readonly></textarea>
+    <br>
+    <button onclick="copyToClipboard()">Copy to Clipboard</button>
+
+    <script>
+        function utf8len(str) {
+            let len = 0;
+            for (let i = 0; i < str.length; i++) {
+                const code = str.charCodeAt(i);
+                if (code <= 0x7F) len++;
+                else if (code <= 0x7FF) len += 2;
+                else if (code <= 0xFFFF) len += 3;
+                else len += 4;
+            }
+            return len;
+        }
+
+        function isValidString(stringData) {
+            for (let i = 0; i < stringData.length; i++) {
+                const code = stringData.charCodeAt(i);
+                if (code < 0 || code > 127 || stringData[i] === ' ') {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function formatNumber(num, length) {
+            return num.toString().padStart(length, '0');
+        }
+
+        function printStrings2(dataView, offset, iSize, iUnicode) {
+            let idx = offset;
+            let result = dataView.getUint8(idx++);
+            if (result > 0x7f) {
+                let cur = dataView.getUint8(idx++);
+                result = (result & 0x7f) | ((cur & 0x7f) << 7);
+                if (cur > 0x7f) {
+                    cur = dataView.getUint8(idx++);
+                    result |= (cur & 0x7f) << 14;
+                    if (cur > 0x7f) {
+                        cur = dataView.getUint8(idx++);
+                        result |= (cur & 0x7f) << 21;
+                        if (cur > 0x7f) {
+                            cur = dataView.getUint8(idx++);
+                            result |= cur << 28;
+                        }
+                    }
+                }
+            }
+
+            let stringData = "";
+            for (let i = 0; i < result; i++) {
+                stringData += String.fromCharCode(dataView.getUint8(idx + i));
+            }
+
+            if (!isValidString(stringData)) {
+                return '';
+            }
+
+            const unicodelen = utf8len(stringData);
+            let output = `${offset.toString(16)} | `;
+            if (iSize) {
+                output += `${formatNumber(result, 3)} | ${formatNumber(unicodelen, 3)} | `;
+            }
+            if (iUnicode) {
+                output += (result != unicodelen ? "_U_ |" : "    |");
+            }
+            output += `${stringData}\n`;
+
+            return output;
+        }
+
+        function analyzeDex() {
+            const fileInput = document.getElementById('dexFile');
+            const outputTextarea = document.getElementById('output');
+            outputTextarea.value = "";
+
+            if (!fileInput.files.length) {
+                alert("Please select a .dex file.");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                const arrayBuffer = event.target.result;
+                const dataView = new DataView(arrayBuffer);
+
+                let output = "=== dexstrings 0.8 - (c) 2015 Hugo Gonzalez @hugo_glez\n";
+                output += "Dex file: " + file.name + "\n";
+                output += "======================\n";
+
+                const stringIdsSize = dataView.getUint32(56, true);
+                const stringIdsOff = dataView.getUint32(60, true);
+
+                for (let i = 0; i < stringIdsSize; i++) {
+                    const stringIdOff = stringIdsOff + i * 4;
+                    const stringDataOff = dataView.getUint32(stringIdOff, true);
+                    const result = printStrings2(dataView, stringDataOff, 1, 1);
+                    if (result) {
+                        output += result;
+                    }
+                }
+
+                outputTextarea.value = output;
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function copyToClipboard() {
+            const outputTextarea = document.getElementById('output');
+            outputTextarea.select();
+            document.execCommand('copy');
+        }
+    </script>
+</body>
+</html>
