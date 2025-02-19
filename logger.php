@@ -1,5 +1,6 @@
 <?php
 // Logger for Renault API queries
+// v. 1.0.1: added full debug output
 // v. 1.0.0 - 19/2/2025
 
 
@@ -125,9 +126,15 @@ if (isset($_GET['myfilename'])) {
 if (isset($_GET['endpoint'])) {
     $endpoint = $_GET['endpoint'];
 } else {
-	$endpoint = "cockpit";
+	$endpoint = "";
 }
 
+
+if (isset($_GET['debug'])) {
+    $debug = $_GET['debug'];
+} else {
+	$debug = 0;
+}
 
 
   //Login Gigya
@@ -169,7 +176,6 @@ if (isset($_GET['endpoint'])) {
   curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
   $response = curl_exec($ch);
   $checkResult = checkResponse($response,"002");
-  //echo "Result 002: " . $checkResult . "<br>";
 	if ( $checkResult !==0 ) {
 		echo '{"loginData" : {"data" : "Login error 002. TERMINATED (" . $checkResult . ")"}}';
 		return -1;
@@ -178,53 +184,30 @@ if (isset($_GET['endpoint'])) {
   $responseData = json_decode($response, TRUE);
   $JWT =  $responseData['id_token'];
 
-/*	echo
-	'
-	{
-		"loginData" : {
-			"cookie" : "' . $oauth_token  . '" ,
-			"JWT" : "' . $JWT . '",
-			"personId" : "' . $personId . '"
-		}
-	}';
-
-*/
-
-//echo "Cookie: " .  $oauth_token  . "<br>";
-//echo "JWT: " .  $JWT  . "<br>";
-//echo "personId: " .  $personId  . "<br>";
 
 $KAMEREON_KEY = $kamereon;
-//echo "KAMEREON_KEY: " . $KAMEREON_KEY . "<br>";
+
+
 
 $accountHeaders = [
     'apikey' => $KAMEREON_KEY,
     'x-gigya-id_token' => $JWT
 ];
 
-/*
-echo "accountHeaders: <pre>";
-print_r($accountHeaders);
-echo "</pre><br><br>";
-*/
 
 $accountUrl = $kamereonurl . "/commerce/v1/persons/" . $personId . "?apikey=" . $KAMEREON_KEY . "&country=" . $country;
-// echo "URL PER ACCOUNT: " . $accountUrl . "\n";
+
 
 
 ///////////
 
 try {
-    $accounts = callAPI($accountUrl, $accountHeaders);
+    $accounts = callAPI($accountUrl, $accountHeaders, $debug);
 } catch (Exception $e) {
     echo "Errore durante la chiamata API: " . $e->getMessage();
 }
 
 
-/*echo "Accounts raw: <pre>";
-    print_r($accounts);
-echo "</pre><br>";
-*/
 
 // Controllo se esistono gli indici necessari
 if (isset($accounts['accounts']) && !empty($accounts['accounts'])) {
@@ -232,18 +215,21 @@ if (isset($accounts['accounts']) && !empty($accounts['accounts'])) {
     if (isset($accounts['accounts'][0])) {
         $accountId = $accounts['accounts'][0]['accountId'] ?? '';
         $accountIdType = $accounts['accounts'][0]['accountType'] ?? '';
-//echo "Account1: " . $accountId . " (Type: " . $accountIdType . ")<br>";
+
     }
 
     // Secondo account
     if (isset($accounts['accounts'][1])) {
         $accountId2 = $accounts['accounts'][1]['accountId'] ?? '';
         $accountId2Type = $accounts['accounts'][1]['accountType'] ?? '';
-//echo "Account2: " . $accountId2 . " (Type: " . $accountId2Type . ")<br>";
+
     }
 } else {
     echo "Nessun account trovato nell'array<br>";
 }
+
+
+
 
 ///////////
 
@@ -251,12 +237,8 @@ if (isset($accounts['accounts']) && !empty($accounts['accounts'])) {
 
 ///////////
 $vehiclesListQueryUrl = $kamereonurl . '/commerce/v1/accounts/' . $accountId2 . '/vehicles?apikey=' . $KAMEREON_KEY . '&country=' . $country;
-$vehicles = callAPI($vehiclesListQueryUrl, $accountHeaders);
-/*
-echo "Vehicles raw: <pre>";
-    print_r($vehicles);
-echo "</pre><br>";
-*/
+$vehicles = callAPI($vehiclesListQueryUrl, $accountHeaders, $debug);
+
 ///////////
 
 
@@ -280,7 +262,19 @@ foreach ($vehicles['vehicleLinks'] as $vehicle) {
     $MY_VIN .= sprintf($vehicle['vin']);
 }
 
-//echo "VIN: " . $MY_VIN . "<br><br>";
+
+if ($debug === '1') {
+  echo "Cookie: " .  $oauth_token  . "<br>";
+  echo "JWT (x-gigya-id_token): " .  $JWT  . "<br>";
+  echo "personId: " .  $personId  . "<br>";
+  echo "KAMEREON_KEY: " . $KAMEREON_KEY . "<br>";
+  echo "URL: " . $accountUrl . "<br>";
+  echo "Account 1: " . $accountId . " (Type: " . $accountIdType . ")<br>";
+  echo "Account 2: " . $accountId2 . " (Type: " . $accountId2Type . ")<br>";
+  echo "VIN: " . $MY_VIN . "<br><br>";
+}
+
+
 
 ///////////////////////
 
@@ -288,56 +282,69 @@ foreach ($vehicles['vehicleLinks'] as $vehicle) {
 
 
 //////////////////////////////////////////////////
-$endpoint = "cockpit";
-//echo $endpoint . ": <br>";
-$result = kamereonGet($JWT, $endpoint,  1 , null);
-/*echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre>');
-echo('Array:<br><pre>' . print_r($result) . '</pre><br>');*/
-if (isset($result['data']['data']['attributes'])) {
-    $carAttributes = $result['data']['data']['attributes'];
-    $fuelAutonomy = $carAttributes['fuelAutonomy'];
-    $fuelQuantity = $carAttributes['fuelQuantity'];
-    $totalMileage = $carAttributes['totalMileage'];
-} else {
-    $fuelAutonomy = "n/a";
-    $fuelQuantity = "n/a";
-    $totalMileage = "n/a";
-    echo "Dati cockpit non disponibili nell'array<br>";
+if (empty($endpoint)) {
+  $endpoint = "cockpit";
+  //echo $endpoint . ": <br>";
+  $result = kamereonGet($JWT, $endpoint,  1 , null, $debug);
+if ($debug === "1") {
+    echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre>');
 }
+  //echo('Array:<br><pre>' . print_r($result) . '</pre><br>');
+  if (isset($result['data']['data']['attributes'])) {
+      $carAttributes = $result['data']['data']['attributes'];
+      $fuelAutonomy = $carAttributes['fuelAutonomy'];
+      $fuelQuantity = $carAttributes['fuelQuantity'];
+      $totalMileage = $carAttributes['totalMileage'];
+  } else {
+      $fuelAutonomy = "n/a";
+      $fuelQuantity = "n/a";
+      $totalMileage = "n/a";
+      echo "Dati cockpit non disponibili nell'array<br>";
+  }
 
 
-$endpoint = "battery-status";
-//echo $endpoint . ":<br>";
-$result = kamereonGet($JWT, $endpoint,  1 , null);
-/*echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre>');
-echo('Array:<br><pre>' . print_r($result) . '</pre><br>');*/
-if (isset($result['data']['data']['attributes'])) {
-    $batteryAttributes = $result['data']['data']['attributes'];
-    $batteryLevel = $batteryAttributes['batteryLevel'];
-    $batteryAutonomy = $batteryAttributes['batteryAutonomy'];
-} else {
-    $batteryLevel = "n/a";
-    $batteryAutonomy = "n/a";
-    echo "Dati batteria non disponibili nell'array<br>";
+  $endpoint = "battery-status";
+  //echo $endpoint . ":<br>";
+  $result = kamereonGet($JWT, $endpoint,  1 , null, $debug);
+if ($debug === "1") {
+    echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre>');
 }
+//  echo('Array:<br><pre>' . print_r($result) . '</pre><br>');*/
+  if (isset($result['data']['data']['attributes'])) {
+      $batteryAttributes = $result['data']['data']['attributes'];
+      $batteryLevel = $batteryAttributes['batteryLevel'];
+      $batteryAutonomy = $batteryAttributes['batteryAutonomy'];
+  } else {
+      $batteryLevel = "n/a";
+      $batteryAutonomy = "n/a";
+      echo "Dati batteria non disponibili nell'array<br>";
+  }
 
 
-$ieri = date('Ymd', strtotime('-1 day'));
-$timestamp = date('Y-m-d H:i:s');
-$endpoint = 'charges?start='.$ieri.'&end='.$ieri.'&type=day';
-//echo $endpoint . ": <br>";
-$result =  kamereonGet($JWT, $endpoint,  1 , null);
-/*echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre><br>');
-echo('Array:<br><pre>' . print_r($result) . '</pre><br>');*/
+  $ieri = date('Ymd', strtotime('-1 day'));
+  $timestamp = date('Y-m-d H:i:s');
+  $endpoint = 'charges?start='.$ieri.'&end='.$ieri.'&type=day';
+  //echo $endpoint . ": <br>";
+  $result =  kamereonGet($JWT, $endpoint,  1 , null, $debug);
+if ($debug === "1") {
+    echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre><br>');
+}
+// echo('Array:<br><pre>' . print_r($result) . '</pre><br>');*/
 
 
-$newData = elaboraCariche($result);
+  $newData = elaboraCariche($result);
 
-$BATTERY_CAPACITY = 7.2;
+  $BATTERY_CAPACITY = 7.2;
 
 
-echo formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuantity, $batteryLevel,
-                $totalMileage, $newData, $BATTERY_CAPACITY, $save, $username, $timestamp,$myfilename);
+echo "<br>----------------------<br>";
+
+  echo formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuantity, $batteryLevel,
+                  $totalMileage, $newData, $BATTERY_CAPACITY, $save, $username, $timestamp,$myfilename);
+} else {
+  $result = kamereonGet($JWT, $endpoint,  1 , null, $debug);
+  echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre>');
+}
 
 ////////////////////////
 
@@ -431,7 +438,7 @@ function formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuan
 
 
 
-function callAPI($url, $headers) {
+function callAPI($url, $headers, $debug) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -442,6 +449,35 @@ function callAPI($url, $headers) {
     ));
 
     $response = curl_exec($ch);
+
+if ( $debug === "1") {
+
+    $decodedResponse = json_decode($response, true); // Il secondo parametro 'true' restituisce un array associativo
+
+
+// Formatta il JSON per una visualizzazione leggibile
+$formattedResponse = json_encode($decodedResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+if ($formattedResponse === false) {
+    // Gestisci l'errore di encoding
+    echo "Errore: Impossibile riformattare la risposta JSON.<br>";
+    echo "RAW RESPONSE FOR " . $url . ":<br><pre>" . htmlspecialchars(print_r($response, true)) . "</pre><br><br>"; // Mostra il raw response per debug
+    return;
+}
+
+echo "RAW RESPONSE FOR " . $url . ":<br><pre>" . htmlspecialchars($formattedResponse) . "</pre><br><br>";
+
+
+    if ($decodedResponse === null && json_last_error() !== JSON_ERROR_NONE) {
+        //Gestisci l'errore di decodifica JSON
+        echo "Errore: Impossibile decodificare la risposta JSON.<br>";
+        echo "RAW RESPONSE FOR " . $url . ":<br><pre>" . htmlspecialchars($response) . "</pre><br><br>"; // Mostra il raw response per debug
+        return; // Esci dalla funzione o dallo script
+    }
+
+
+}
+
 
     if(curl_errno($ch)) {
         $error = curl_error($ch);
@@ -461,7 +497,7 @@ function callAPI($url, $headers) {
 }
 
 
-function kamereonGet($id_token, $path, $version, $optionalParameters) {
+function kamereonGet($id_token, $path, $version, $optionalParameters, $debug) {
     global $kamereonurl, $country, $accountId, $MY_VIN, $KAMEREON_KEY;
 
      // Determina il separatore di query
@@ -483,7 +519,7 @@ function kamereonGet($id_token, $path, $version, $optionalParameters) {
     $debugPath = "v" . $version . "/cars/" . $MY_VIN . "/" . $path;
 
     try {
-        $response = callAPI($fullUrl, $headers);
+        $response = callAPI($fullUrl, $headers, $debug);
 
         return [
                 'status' => 'ok',
