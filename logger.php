@@ -114,6 +114,14 @@ if (isset($_GET['save'])) {
 	$save = 0;
 }
 
+
+if (isset($_GET['myfilename'])) {
+    $myfilename = $_GET['myfilename'];
+} else {
+	$myfilename = "";
+}
+
+
 if (isset($_GET['endpoint'])) {
     $endpoint = $_GET['endpoint'];
 } else {
@@ -329,14 +337,14 @@ $BATTERY_CAPACITY = 7.2;
 
 
 echo formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuantity, $batteryLevel,
-                $totalMileage, $newData, $BATTERY_CAPACITY, $save, $username, $timestamp);
+                $totalMileage, $newData, $BATTERY_CAPACITY, $save, $username, $timestamp,$myfilename);
 
 ////////////////////////
 
 
 
 function formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuantity, $batteryLevel,
-                    $totalMileage, $newData, $BATTERY_CAPACITY, $save, $username, $timestamp ) {
+                    $totalMileage, $newData, $BATTERY_CAPACITY, $save, $username, $timestamp,$myfilename ) {
 
    $output = '';
    $KML = round($fuelAutonomy/$fuelQuantity,1);
@@ -345,6 +353,9 @@ function formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuan
    $KW100 = round(100/$KMKWH,0);
    switch($format) {
        case 'human':
+            if ($save === '1') {
+                echo "You specified 'save=1', but human-readable output is not saved: please specify TSV or CSV format to save data to file.<br>";
+            }
            $output = "Data/ora query: " . $timestamp . "<br>" .
                   "Autonomia benzina: " . $fuelAutonomy . " km<br>" .
                   "Autonomia batteria: " . $batteryAutonomy . " km<br>" .
@@ -374,17 +385,22 @@ function formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuan
                round($batteryAutonomy/($batteryLevel * $BATTERY_CAPACITY/100),0)
            ]) . "\n";
 
-           if (($save === '1') && !empty($username)) {
-               // Estrai la parte prima della @
-               $filename = explode('@', $username)[0];
-               // Aggiungi estensione appropriata
-               $filename .= '.' . $format;
-               // Salva su file (modalità append)
-               file_put_contents($filename, $output, FILE_APPEND);
+           if ($save === '1')  {
+                if (empty($myfilename)) {
+                  echo "ERROR, NOT SAVED: please specify parameter 'myfilename' (without extension)<br>";
+                } else {
+                    $filename = $myfilename . "." . $format;
+                   // Salva su file (modalità append)
+                   file_put_contents($filename, $output, FILE_APPEND);
+                   echo "Saved to <a href='" . $filename . "'>" . $filename . "</a><br>";
+                }
            }
            break;
 
        case 'html':
+            if ($save === '1') {
+                echo "You specified 'save=1', but HTML output is not saved: please specify TSV or CSV format to save data to file.<br>";
+            }
            $output = "<table border='1'>
                    <tr><td>Data query</td><td>$timestamp</td></tr>
                    <tr><td>Autonomia benzina</td><td>$fuelAutonomy km</td></tr>
