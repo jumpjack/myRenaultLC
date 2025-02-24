@@ -3,7 +3,7 @@ Log to file the data coming from Renault server about your car.
 You must upload [the scrip](https://github.com/jumpjack/myRenaultLC/blob/main/logger.php)t to a server supporting php, then call it from a [cronjob](https://cron-job.org/en/) periodically: 
 at each call the script will save one line to a TSV file (CSV separated by tabs). Use this url for calling:
 
-`YOURPHPSERVER/logger.php?format=tsv&save=1&myfilename=test001&username=EMAIL&password=PASSWORD`
+`https://YOURPHPSERVER/logger.php?format=tsv&save=1&myfilename=test001&username=EMAIL&password=PASSWORD`
 
 You must use same email and password you use for Renault site and MyRenault app.
 
