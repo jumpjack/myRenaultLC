@@ -1,0 +1,47 @@
+Log to file the data coming from Renault server about your car.
+
+You must upload [the scrip](https://github.com/jumpjack/myRenaultLC/blob/main/logger.php)t to a server supporting php, then call it from a [cronjob](https://console.cron-job.org/jobs) periodically: 
+at each call the script will save one line to a TSV file (CSV separated by tabs). Use this url for calling:
+
+`YOURPHPSERVER/logger.php?format=tsv&save=1&myfilename=test001&username=EMAIL&password=PASSWORD`
+
+You must use same email and password you use for Renault site and MyRenault app.
+
+The resulting file, in this case, will be located at https://MYPHPSERVER/test001.tsv
+
+Example of file contents:
+
+```
+Data query	Autonomia benzina (km)	Autonomia batteria (km)	Livello benzina (L)	Livello batteria(%)	Km tot	Ricarica giorno prec	kWh caricati	Durata ricarica (min)	km/l	km/kWh
+2025-02-19 22:53:48	270	40	23	99	82815	20250218	5.05	160	11.7	6
+2025-02-19 23:09:05	270	40	23	99	82815	20250218	5.05	160	11.7	6
+2025-02-20 00:09:05	270	40	23	99	82815	20250219	4.15	136	11.7	6
+2025-02-20 01:09:06	270	40	23	99	82815	20250219	4.15	136	11.7	6
+2025-02-20 02:09:06	270	40	23	99	82815	20250219	4.15	136	11.7	6
+2025-02-20 03:09:06	270	40	23	99	82815	20250219	4.15	136	11.7	6
+2025-02-20 04:09:04	270	40	23	99	82815	20250219	4.15	136	11.7	6
+2025-02-20 05:09:04	270	40	23	99	82815	20250219	4.15	136	11.7	6
+2025-02-20 06:09:04	270	40	23	99	82815	20250219	4.15	136	11.7	6
+2025-02-20 07:09:06	270	39	23	99	82815	20250219	4.15	136	11.7	5
+2025-02-20 08:09:06	270	34	23	82	82825	20250219	4.15	136	11.7	6
+2025-02-20 09:09:05	270	34	23	82	82825	20250219	4.15	136	11.7	6
+2025-02-20 13:16:39	270	34	23	82	82825	20250219	4.15	136	11.7	6
+2025-02-20 14:09:05	270	34	23	82	82825	20250219	4.15	136	11.7	6
+2025-02-20 15:09:05	270	32	23	79	82825	20250219	4.15	136	11.7	6
+2025-02-20 16:09:06	270	32	23	79	82825	20250219	4.15	136	11.7	6
+2025-02-20 17:09:05	270	27	23	70	82829	20250219	4.15	136	11.7	5
+2025-02-20 18:09:05	268	21	23	54	82842	20250219	4.15	136	11.7	5
+2025-02-20 19:09:05	268	7	23	34	82847	20250219	4.15	136	11.7	3
+2025-02-20 20:09:06	268	15	23	33	82852	20250219	4.15	136	11.7	6
+2025-02-20 21:09:06	268	11	23	29	82857	20250219	4.15	136	11.7	5
+2025-02-20 22:09:06	268	25	23	57	82857	20250219	4.15	136	11.7	6
+2025-02-20 23:09:05	268	17	23	41	82867	20250219	4.15	136	11.7	6
+2025-02-21 00:09:05	268	17	23	41	82867	20250220	4.45	129	11.7	6
+2025-02-21 01:09:06	268	27	23	61	82867	20250220	4.45	129	11.7	6
+2025-02-21 02:09:05	268	41	23	89	82867	20250220	4.45	129	11.7	6
+```
+
+You can also directly import the file in google sheets writing in cell A1:
+
+`=IMPORTDATA("MYPHPSERVER/log001.tsv")`
+
