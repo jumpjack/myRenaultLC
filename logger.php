@@ -1,6 +1,14 @@
 <?php
 // Logger for Renault API queries
-// v. 1.0.1: added full debug output
+
+// https://console.cron-job.org/jobs
+
+
+// v.  1.1.0 - 24/2/2025:
+//     Fixed support of endpoints with parameters
+//     Fixed support of days with no charges
+//     Fixed support for manual paths with or without endpoint   
+
 // v. 1.0.0 - 19/2/2025
 
 
@@ -94,13 +102,130 @@ if (isset($_GET['kamereonurl'])) { // Kamrereon server: https://api-wired-prod-1
 }
 
 
-if (isset($_GET['country'])) { // Kamrereon server: https://api-wired-prod-1-euw1.wrd-aws.com as of feb/2025
+if (isset($_GET['country'])) { // Country
     $country = $_GET['country'];
 } else {
     $country = "IT";
     //printHelp();
 	//return -7;
 }
+
+// {PATH1}{id}{PATH2}v1{PATH3}{vin}/"
+// 
+if (isset($_GET['path1'])) { // First part of path
+    $path1 = $_GET['path1'];
+} else {
+    $path1 = "/commerce/v1/accounts/";
+    //printHelp();
+	//return -7;
+}
+
+
+if (isset($_GET['path2'])) { // Second part of path
+    $path2 = $_GET['path2'];
+} else {
+    $path2 = "/kamereon/kca/car-adapter/";
+    //printHelp();
+	//return -7;
+}
+
+
+if (isset($_GET['path3'])) { // Third part of path
+    $path3 = $_GET['path3'];
+} else {
+    $path3 = "/cars/";
+    //printHelp();
+	//return -7;
+}
+
+
+// /commerce/v1/accounts/{id}/kamereon/kca/car-adapter/v1/cars/{vin}/cockpit
+// {PATH1}{id}{PATH2}v1{PATH3}cockpit
+                  // Others:
+                     // /commerce/v1/accounts/{id}/kamereon/kca/car-adapter/v1/cars/{vin}/cockpit 
+                     // /commerce/v1/accounts/{id}/kamereon/kcm/v1/vehicles/{vin}  /ev/soc-levels
+                     // 
+                     // {PATH1}{id}{PATH4}v1{PATH5}{vin}  /ev/soc-levels
+                     //
+                     // /commerce/v1/accounts/{accountId}/vehicles/{vin}  /details
+                     // {PATH1}{id}{PATH5}{vin}  /details
+                     //
+                     // /commerce/v1/accounts/{id}
+                     // {PATH1}{id}
+                     //
+                     // /commerce/v1/accounts/{id}/password
+                     // {PATH1}{id}/password
+                     //
+                     // /commerce/v2/accounts/{accountId}/vehicles
+                     // {PATH1b}{id}/vehicles
+                     //
+                     // /commerce/v1/accounts/{accountId}/vehicles/{vin}/virtual-keys
+                     // /commerce/v1/accounts/{accountId2}/vehicles/{vin}/alerts
+                     // {PATH1}{id}{PATH5}{vin} /virtual-keys
+                     // /{PATH1}{id}{PATH5}{vin}/virtual-keys
+                     //
+                     // /commerce/v1/persons/{personId}/vehicles/{vin}/admin
+                     // {PATH6}{personId}{PATH5}{vin} /admin
+
+if (isset($_GET['path4'])) { // Third part of path
+    $path4 = $_GET['path4'];
+} else {
+    $path4 = "/kamereon/kcm/";
+}
+
+if (isset($_GET['path5'])) { // Third part of path
+    $path5 = $_GET['path5'];
+} else {
+    $path5 = "/vehicles/";
+}
+
+if (isset($_GET['path6'])) { // Third part of path
+    $path6 = $_GET['path6'];
+} else {
+    $path6 = "/commerce/v1/persons/";
+}
+
+if (isset($_GET['path1b'])) { // Third part of path
+    $path1b = $_GET['path1b'];
+} else {
+    $path1b = "/commerce/v2/accounts/";
+}
+
+
+if (isset($_GET['pathtype'])) { // How the path is made
+    $pathType = $_GET['pathtype'];
+echo "PATHTYPE: manually set to '" . $pathType . "'<br>";
+} else {
+    $pathType = "";//{PATH1}{id}{PATH2}v1{PATH3}{vin}/";
+                    // Default: /commerce/v1/accounts/{id}/kamereon/kca/car-adapter/v1/cars/{vin}/  {endpoint}
+                     //          {PATH1}{id}{PATH2}v1{PATH3}{vin}
+                     // Others:
+                     // /commerce/v1/accounts/{accountId}/kamereon/kcm/v1/vehicles/{vin}/   ev/soc-levels , settings, pause-resume, schedule, start
+                     // {PATH1}{id}{PATH4}v1{PATH5}/{vin}    /ev/soc-levels
+                     //
+                     // /commerce/v1/accounts/{accountId}/vehicles/{vin}   /details
+                     // {PATH1}{accountId}{PATH5}{vin}    /details
+                     //
+                     // /commerce/v1/accounts  /{id}
+                     // {PATH1}{id}
+                     //
+                     // /commerce/v1/accounts/{id}    /password
+                     // {PATH1}{id}/password
+                     //
+                     // /commerce/v2/accounts/{accountId}   /vehicles
+                     // {PATH1b}{accountId}   /vehicles
+                     //
+                     // /commerce/v1/accounts/{accountId}/vehicles/{vin}/virtual-keys
+                     // {PATH1}{accountId}{PATH5}{vin}/virtual-keys
+                     //
+                     // /commerce/v1/persons/{personId}/vehicles/{vin}/admin
+                     // {PATH6}{personId}{PATH5}{vin}/admin
+                     // {PATH6}{personId} /ze-passes
+    //printHelp();
+	//return -7;
+}
+
+
 
 
 if (isset($_GET['format'])) {
@@ -130,11 +255,22 @@ if (isset($_GET['endpoint'])) {
 }
 
 
-if (isset($_GET['debug'])) {
-    $debug = $_GET['debug'];
+
+if (isset($_GET['getpost'])) {
+    $getpost = $_GET['getpost'];
 } else {
-	$debug = 0;
+	$getpost = "get";
 }
+
+echo "<br>GET OR POST?" . $getpost . "<br>";
+
+if (isset($_GET['postpayload'])) {
+    $postPayload = $_GET['postpayload'];
+} else {
+	$postPayload = "";
+}
+
+echo "<br>Post payload:<br>" . $postPayload . "<br>";
 
 
   //Login Gigya
@@ -176,6 +312,7 @@ if (isset($_GET['debug'])) {
   curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
   $response = curl_exec($ch);
   $checkResult = checkResponse($response,"002");
+  //echo "Result 002: " . $checkResult . "<br>";
 	if ( $checkResult !==0 ) {
 		echo '{"loginData" : {"data" : "Login error 002. TERMINATED (" . $checkResult . ")"}}';
 		return -1;
@@ -184,30 +321,53 @@ if (isset($_GET['debug'])) {
   $responseData = json_decode($response, TRUE);
   $JWT =  $responseData['id_token'];
 
+/*	echo
+	'
+	{
+		"loginData" : {
+			"cookie" : "' . $oauth_token  . '" ,
+			"JWT" : "' . $JWT . '",
+			"personId" : "' . $personId . '"
+		}
+	}';
+
+*/
+
+//echo "Cookie: " .  $oauth_token  . "<br>";
+//echo "JWT: " .  $JWT  . "<br>";
+//echo "personId: " .  $personId  . "<br>";
 
 $KAMEREON_KEY = $kamereon;
-
-
+//echo "KAMEREON_KEY: " . $KAMEREON_KEY . "<br>";
 
 $accountHeaders = [
     'apikey' => $KAMEREON_KEY,
     'x-gigya-id_token' => $JWT
 ];
 
+/*
+echo "accountHeaders: <pre>";
+print_r($accountHeaders);
+echo "</pre><br><br>";
+*/
 
 $accountUrl = $kamereonurl . "/commerce/v1/persons/" . $personId . "?apikey=" . $KAMEREON_KEY . "&country=" . $country;
-
+// echo "URL PER ACCOUNT: " . $accountUrl . "\n";
 
 
 ///////////
 
 try {
-    $accounts = callAPI($accountUrl, $accountHeaders, $debug);
+    $accounts = callAPI($accountUrl, $accountHeaders);
 } catch (Exception $e) {
-    echo "Errore durante la chiamata API: " . $e->getMessage();
+    echo "Errore cercando l'account: " . $e->getMessage();
 }
 
 
+/*echo "Accounts raw: <pre>";
+    print_r($accounts);
+echo "</pre><br>";
+*/
 
 // Controllo se esistono gli indici necessari
 if (isset($accounts['accounts']) && !empty($accounts['accounts'])) {
@@ -215,21 +375,20 @@ if (isset($accounts['accounts']) && !empty($accounts['accounts'])) {
     if (isset($accounts['accounts'][0])) {
         $accountId = $accounts['accounts'][0]['accountId'] ?? '';
         $accountIdType = $accounts['accounts'][0]['accountType'] ?? '';
-
+//echo "Account1: " . $accountId . " (Type: " . $accountIdType . ")<br>";
     }
 
     // Secondo account
     if (isset($accounts['accounts'][1])) {
         $accountId2 = $accounts['accounts'][1]['accountId'] ?? '';
         $accountId2Type = $accounts['accounts'][1]['accountType'] ?? '';
-
+//echo "Account2: " . $accountId2 . " (Type: " . $accountId2Type . ")<br>";
     }
 } else {
-    echo "Nessun account trovato nell'array<br>";
+    echo "Nessun account trovato per utente:<br>";
+    echo $username . "<br>";
+    echo $password . "<br>";
 }
-
-
-
 
 ///////////
 
@@ -237,8 +396,12 @@ if (isset($accounts['accounts']) && !empty($accounts['accounts'])) {
 
 ///////////
 $vehiclesListQueryUrl = $kamereonurl . '/commerce/v1/accounts/' . $accountId2 . '/vehicles?apikey=' . $KAMEREON_KEY . '&country=' . $country;
-$vehicles = callAPI($vehiclesListQueryUrl, $accountHeaders, $debug);
-
+$vehicles = callAPI($vehiclesListQueryUrl, $accountHeaders);
+/*
+echo "Vehicles raw: <pre>";
+    print_r($vehicles);
+echo "</pre><br>";
+*/
 ///////////
 
 
@@ -247,11 +410,16 @@ $vehicles = callAPI($vehiclesListQueryUrl, $accountHeaders, $debug);
 //////////////
 // Verifica presenza veicoli
 if (!isset($vehicles['vehicleLinks']) || empty($vehicles['vehicleLinks'])) {
+    echo "Nessun veicolo trovato per utente:<br>";
+    echo $username . "<br>";
+    echo $password . "<br>";
     error_log("ERR unknown - Cannot extract VIN from response, no vehicles array: " . print_r($vehicles, true));
     return [
         'status' => 'error in VIN extraction, no vehicles array',
         'data' => $vehicles
     ];
+} else {//
+// ok
 }
 
 
@@ -262,19 +430,7 @@ foreach ($vehicles['vehicleLinks'] as $vehicle) {
     $MY_VIN .= sprintf($vehicle['vin']);
 }
 
-
-if ($debug === '1') {
-  echo "Cookie: " .  $oauth_token  . "<br>";
-  echo "JWT (x-gigya-id_token): " .  $JWT  . "<br>";
-  echo "personId: " .  $personId  . "<br>";
-  echo "KAMEREON_KEY: " . $KAMEREON_KEY . "<br>";
-  echo "URL: " . $accountUrl . "<br>";
-  echo "Account 1: " . $accountId . " (Type: " . $accountIdType . ")<br>";
-  echo "Account 2: " . $accountId2 . " (Type: " . $accountId2Type . ")<br>";
-  echo "VIN: " . $MY_VIN . "<br><br>";
-}
-
-
+echo "VIN: '" . $MY_VIN . "'<br><br>";
 
 ///////////////////////
 
@@ -283,66 +439,83 @@ if ($debug === '1') {
 
 //////////////////////////////////////////////////
 if (empty($endpoint)) {
-  $endpoint = "cockpit";
-  //echo $endpoint . ": <br>";
-  $result = kamereonGet($JWT, $endpoint,  1 , null, $debug);
-if ($debug === "1") {
-    echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre>');
-}
-  //echo('Array:<br><pre>' . print_r($result) . '</pre><br>');
-  if (isset($result['data']['data']['attributes'])) {
-      $carAttributes = $result['data']['data']['attributes'];
-      $fuelAutonomy = $carAttributes['fuelAutonomy'];
-      $fuelQuantity = $carAttributes['fuelQuantity'];
-      $totalMileage = $carAttributes['totalMileage'];
-  } else {
-      $fuelAutonomy = "n/a";
-      $fuelQuantity = "n/a";
-      $totalMileage = "n/a";
-      echo "Dati cockpit non disponibili nell'array<br>";
-  }
+echo "<br>*** no endpoint<br>Pathtype = " . $pathType;
+    if (empty($pathType)) {
+echo "<br>    *** no endpint and no pathtype: showing default data<br>";
+      $endpoint = "cockpit";
+      //echo $endpoint . ": <br>";
+      $result = kamereonGet($JWT, $endpoint,  1 , null, "{PATH1}{id}{PATH2}v1{PATH3}{vin}/");
+      /*echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre>');
+      echo('Array:<br><pre>' . print_r($result) . '</pre><br>');*/
+      if (isset($result['data']['data']['attributes'])) {
+          $carAttributes = $result['data']['data']['attributes'];
+          $fuelAutonomy = $carAttributes['fuelAutonomy'];
+          $fuelQuantity = $carAttributes['fuelQuantity'];
+          $totalMileage = $carAttributes['totalMileage'];
+      } else {
+          $fuelAutonomy = "n/a";
+          $fuelQuantity = "n/a";
+          $totalMileage = "n/a";
+          echo "Dati cockpit non disponibili nell'array<br>";
+      }
 
 
-  $endpoint = "battery-status";
-  //echo $endpoint . ":<br>";
-  $result = kamereonGet($JWT, $endpoint,  1 , null, $debug);
-if ($debug === "1") {
-    echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre>');
-}
-//  echo('Array:<br><pre>' . print_r($result) . '</pre><br>');*/
-  if (isset($result['data']['data']['attributes'])) {
-      $batteryAttributes = $result['data']['data']['attributes'];
-      $batteryLevel = $batteryAttributes['batteryLevel'];
-      $batteryAutonomy = $batteryAttributes['batteryAutonomy'];
-  } else {
-      $batteryLevel = "n/a";
-      $batteryAutonomy = "n/a";
-      echo "Dati batteria non disponibili nell'array<br>";
-  }
+      $endpoint = "battery-status";
+      //echo $endpoint . ":<br>";
+      $result = kamereonGet($JWT, $endpoint,  1 , null, "{PATH1}{id}{PATH2}v1{PATH3}{vin}/");
+      /*echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre>');
+      echo('Array:<br><pre>' . print_r($result) . '</pre><br>');*/
+      if (isset($result['data']['data']['attributes'])) {
+          $batteryAttributes = $result['data']['data']['attributes'];
+          $batteryLevel = $batteryAttributes['batteryLevel'];
+          $batteryAutonomy = $batteryAttributes['batteryAutonomy'];
+      } else {
+          $batteryLevel = "n/a";
+          $batteryAutonomy = "n/a";
+          echo "Dati batteria non disponibili nell'array<br>";
+      }
 
 
-  $ieri = date('Ymd', strtotime('-1 day'));
-  $timestamp = date('Y-m-d H:i:s');
-  $endpoint = 'charges?start='.$ieri.'&end='.$ieri.'&type=day';
-  //echo $endpoint . ": <br>";
-  $result =  kamereonGet($JWT, $endpoint,  1 , null, $debug);
-if ($debug === "1") {
-    echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre><br>');
-}
-// echo('Array:<br><pre>' . print_r($result) . '</pre><br>');*/
+      $oggi = date('Ymd');
+      $timestamp = date('Y-m-d H:i:s');
+      $endpoint = 'charges?start='.$oggi.'&end='.$oggi.'&type=day';
+//echo $endpoint . ": <br>";
+      $result = kamereonGet($JWT, $endpoint,  1 , null, "{PATH1}{id}{PATH2}v1{PATH3}{vin}/");
+//echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre><br>');
+//echo('Array:<br><pre>' . print_r($result) . '</pre><br>');
 
 
-  $newData = elaboraCariche($result);
+      $newData = elaboraCariche($result);
 
-  $BATTERY_CAPACITY = 7.2;
+      $BATTERY_CAPACITY = 7.2;
 
 
-echo "<br>----------------------<br>";
+      echo formatOutput($format, $oggi, $fuelAutonomy, $batteryAutonomy, $fuelQuantity, $batteryLevel,
+                      $totalMileage, $newData, $BATTERY_CAPACITY, $save, $username, $timestamp,$myfilename);
+     ///////// End of default behaviousr                      
+    } else {
+echo "<br>*** found pathtype: showing result of direct path:<br>";
 
-  echo formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuantity, $batteryLevel,
-                  $totalMileage, $newData, $BATTERY_CAPACITY, $save, $username, $timestamp,$myfilename);
+    // direct path with endpoint included
+        if ($getpost === "get") {
+echo "<br>Performing GET...<br>";
+            $result =  kamereonGet($JWT, "",  1 , null, $pathType);
+        } else {
+echo "<br>1 Performing POST for '" . $pathType . "'...<br>";
+            $result =  kamereonPost($JWT, "", $postPayload, 1, "", "", "", $pathType);
+        }
+        echo('DIRECT PATH RESULT:<br><pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre>');
+    }
 } else {
-  $result = kamereonGet($JWT, $endpoint,  1 , null, $debug);
+echo "<br>found endpoint<br>";
+        if ($getpost === "get") {
+echo "<br>Performing GET...<br>";
+            $result =  kamereonGet($JWT, $endpoint,  1 , null, $pathType);
+        } else {
+echo "<br>2 Performing POST for '" . $endpoint . "'...<br>";
+        //     function kamereonGet($id_token, $endp, $version, $optionalParameters, $pathType) {
+            $result =  kamereonPost($JWT, $endpoint, $postPayload, 1, "", "", "", $pathType);
+        }
   echo('<pre>' . print_r(json_encode($result, JSON_PRETTY_PRINT), true) . '</pre>');
 }
 
@@ -350,7 +523,7 @@ echo "<br>----------------------<br>";
 
 
 
-function formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuantity, $batteryLevel,
+function formatOutput($format, $oggi, $fuelAutonomy, $batteryAutonomy, $fuelQuantity, $batteryLevel,
                     $totalMileage, $newData, $BATTERY_CAPACITY, $save, $username, $timestamp,$myfilename ) {
 
    $output = '';
@@ -358,6 +531,8 @@ function formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuan
    $L100 = round(100/$KML,1);
    $KMKWH = round($batteryAutonomy/($batteryLevel * $BATTERY_CAPACITY/100),0);
    $KW100 = round(100/$KMKWH,0);
+   $totEnergy = (isset($newData['totalEnergy']) ? $newData['totalEnergy'] : 0);
+   $totDuration = (isset($newData['totalDuration']) ? $newData['totalDuration'] : 0);
    switch($format) {
        case 'human':
             if ($save === '1') {
@@ -369,8 +544,8 @@ function formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuan
                   "Livello benzina: " . $fuelQuantity . " L<br>" .
                   "Livello batteria: " . $batteryLevel . "%<br>" .
                   "Km tot: " . $totalMileage . " km<br>" .
-                  "Ricarica tot del " . $ieri . ": " . $newData['totalEnergy'] . " kWh<br>" .
-                  "Durata ricarica: " . $newData['totalDuration'] . " min<br>" .
+                  "Ricarica tot del " . $oggi . ": " . $totEnergy . " kWh<br>" .
+                  "Durata ricarica: " . $totDuration . " min<br>" .
                   "Stima prossimi consumi benzina: " . $KML . " km/L, " . $L100  . " L/100km<br>" .
                   "Stima prossimi consumi elettrici: " . $KMKWH . " km/kWh, " . $KW100 . " kWh/100km<br>";
            break;
@@ -385,9 +560,9 @@ function formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuan
                $fuelQuantity,
                $batteryLevel,
                $totalMileage,
-               $ieri,
-               $newData['totalEnergy'],
-               $newData['totalDuration'],
+               $oggi,
+               $totEnergy,
+               $totDuration,
                round($fuelAutonomy/$fuelQuantity,1),
                round($batteryAutonomy/($batteryLevel * $BATTERY_CAPACITY/100),0)
            ]) . "\n";
@@ -415,8 +590,8 @@ function formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuan
                    <tr><td>Livello benzina</td><td>$fuelQuantity L</td></tr>
                    <tr><td>Livello batteria</td><td>$batteryLevel%</td></tr>
                    <tr><td>Km tot</td><td>$totalMileage km</td></tr>
-                   <tr><td>Ricarica giorno $ieri</td><td>{$newData['totalEnergy']} kWh</td></tr>
-                   <tr><td>Durata ricarica</td><td>{$newData['totalDuration']} min</td></tr>
+                   <tr><td>Ricarica giorno $oggi</td><td>{$totEnergy} kWh</td></tr>
+                   <tr><td>Durata ricarica</td><td>{$totDuration} min</td></tr>
                    <tr><td>Stima prossimi consumi benzina</td><td>" . $KML . " km/L, " . $L100  . " L/100km</td></tr>
                    <tr><td>Stima prossimi consumi elettrici</td><td>" . $KMKWH . " km/kWh, " . $KW100 . " kWh/100km</td></tr>
                   </table>";
@@ -438,7 +613,7 @@ function formatOutput($format, $ieri, $fuelAutonomy, $batteryAutonomy, $fuelQuan
 
 
 
-function callAPI($url, $headers, $debug) {
+function callAPI($url, $headers) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -449,35 +624,6 @@ function callAPI($url, $headers, $debug) {
     ));
 
     $response = curl_exec($ch);
-
-if ( $debug === "1") {
-
-    $decodedResponse = json_decode($response, true); // Il secondo parametro 'true' restituisce un array associativo
-
-
-// Formatta il JSON per una visualizzazione leggibile
-$formattedResponse = json_encode($decodedResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-if ($formattedResponse === false) {
-    // Gestisci l'errore di encoding
-    echo "Errore: Impossibile riformattare la risposta JSON.<br>";
-    echo "RAW RESPONSE FOR " . $url . ":<br><pre>" . htmlspecialchars(print_r($response, true)) . "</pre><br><br>"; // Mostra il raw response per debug
-    return;
-}
-
-echo "RAW RESPONSE FOR " . $url . ":<br><pre>" . htmlspecialchars($formattedResponse) . "</pre><br><br>";
-
-
-    if ($decodedResponse === null && json_last_error() !== JSON_ERROR_NONE) {
-        //Gestisci l'errore di decodifica JSON
-        echo "Errore: Impossibile decodificare la risposta JSON.<br>";
-        echo "RAW RESPONSE FOR " . $url . ":<br><pre>" . htmlspecialchars($response) . "</pre><br><br>"; // Mostra il raw response per debug
-        return; // Esci dalla funzione o dallo script
-    }
-
-
-}
-
 
     if(curl_errno($ch)) {
         $error = curl_error($ch);
@@ -490,6 +636,9 @@ echo "RAW RESPONSE FOR " . $url . ":<br><pre>" . htmlspecialchars($formattedResp
     $data = json_decode($response, true);
 
     if (json_last_error() !== JSON_ERROR_NONE) {
+        echo "<br>ERROR! Raw api response: <pre><br>" . $response . "<br><br></pre>Array:<br><pre>";
+        print_r($response);
+        echo "</pre>";
         throw new Exception("Errore nella decodifica JSON: " . json_last_error_msg());
     }
 
@@ -497,29 +646,68 @@ echo "RAW RESPONSE FOR " . $url . ":<br><pre>" . htmlspecialchars($formattedResp
 }
 
 
-function kamereonGet($id_token, $path, $version, $optionalParameters, $debug) {
-    global $kamereonurl, $country, $accountId, $MY_VIN, $KAMEREON_KEY;
+function kamereonGet($id_token, $endp, $version, $optionalParameters, $pathType) {
+    global $kamereonurl, $country, $accountId,  $accountId2, $MY_VIN, $KAMEREON_KEY;
+    global $path1,$path1b,$path2,$path3,$path4,$path5,$path6;
 
      // Determina il separatore di query
     $QUESTION_MARK = (strpos($path, "?") !== false) ? "&" : "?";
 
-    // Costruisci l'URL completo
-    $fullUrl = $kamereonurl . '/commerce/v1/accounts/' . $accountId .
-              "/kamereon/kca/car-adapter/v" . $version . "/cars/" . $MY_VIN . "/" . $path .
-              $QUESTION_MARK . "country=" . $country . "&" . $optionalParameters;
+    // Percorso standard per GET:
+    // /commerce/v1/accounts/{id}/kamereon/kca/car-adapter/v1/cars/{vin}/{query}
+    // /commerce/v1/accounts/{id}/kamereon/kca/car-adapter/v1/cars/{vin}/actions/{action}
+    // {PATH1}{id}{PATH2}v1{PATH3}{vin}/
+    // path1 = /commerce/v1/accounts/
+    // path2 = /kamereon/kca/car-adapter/
+    // path3 = /cars/
 
-//echo "   Full url: " . $fullUrl . "<br>";
+//echo "DEBUG: pathtype1 = " .  $pathType . "<br>";
+
+    $pathType = str_ireplace("{PATH1}", $path1, $pathType);
+    $pathType = str_ireplace("{PATH1b}", $path1b, $pathType);
+    $pathType = str_ireplace("{PATH2}", $path2, $pathType);
+    $pathType = str_ireplace("{PATH3}", $path3, $pathType);
+    $pathType = str_ireplace("{PATH4}", $path4, $pathType);
+    $pathType = str_ireplace("{PATH5}", $path5, $pathType);
+    $pathType = str_ireplace("{PATH6}", $path6, $pathType);
+    $pathType = str_ireplace("{id}", $accountId, $pathType);
+    $pathType = str_ireplace("{accountId}", $accountId, $pathType);
+    $pathType = str_ireplace("{account_id}", $accountId, $pathType);
+    $pathType = str_ireplace("{id2}", $accountId2, $pathType);
+    $pathType = str_ireplace("{accountId2}", $accountId2, $pathType);
+    $pathType = str_ireplace("{account_id2}", $accountId, $pathType);
+    $pathType = str_ireplace("{vin}", $MY_VIN, $pathType);
+    $pathType = str_ireplace("{personId}", $personId, $pathType);
+
+        // Costruisci l'URL completo
+    /*    $fullUrl = $kamereonurl .
+                    $path1 . $accountId .  $path2 . 'v' . $version . $path3 . $MY_VIN .
+                    "/" . $path .
+                  $QUESTION_MARK . "country=" . $country . "&" . $optionalParameters;
+    // https://api-wired-prod-1-euw1.wrd-aws.com/commerce/v1/accounts/47d74bba-7bcb-41c2-8bba-564931815b6d/kamereon/kca/car-adapter/v1/cars/VF1RJB00666097032/cockpit?country=IT&
+    // https://api-wired-prod-1-euw1.wrd-aws.com/commerce/v1/accounts/47d74bba-7bcb-41c2-8bba-564931815b6d/kamereon/kca/car-adapter/v1/cars/VF1RJB00666097032/cockpit?country=IT&
+    */
+//echo "DEBUG: pathtype2 = " .  $pathType . "<br>";
+
+
+    $fullUrl = $kamereonurl .
+                $pathType .
+                $endp .
+                $QUESTION_MARK . "country=" . $country . "&" . $optionalParameters;
+
+echo "   Full url: " . $fullUrl . "<br>";
 
     // Prepara gli headers
     $headers = [
         'x-gigya-id_token' => $id_token,
-        'apikey' => $KAMEREON_KEY
+        'apikey' => $KAMEREON_KEY,
+        'id' => $accountId
     ];
 
     $debugPath = "v" . $version . "/cars/" . $MY_VIN . "/" . $path;
 
     try {
-        $response = callAPI($fullUrl, $headers, $debug);
+        $response = callAPI($fullUrl, $headers);
 
         return [
                 'status' => 'ok',
@@ -546,6 +734,117 @@ function kamereonGet($id_token, $path, $version, $optionalParameters, $debug) {
         }
     }
 }
+
+
+
+
+
+
+
+function kamereonPost($id_token, $endp,     $data,      $version, $sourceField, $destField, $debugMode, $pathType) {
+    global $kamereonurl, $country, $accountId,  $accountId2, $MY_VIN, $KAMEREON_KEY;
+    // Log di inizio
+    echo "Sending POST request for '" . $path . "' using library version " . $version . "...<br>";
+
+    // Determina se la URL contiene un "?" e imposta il delimitatore
+    $QUESTION_MARK = (strpos($path, "?") > 0) ? "&" : "?";
+
+    $pathType = str_ireplace("{id}", $accountId, $pathType);
+    $pathType = str_ireplace("{accountId}", $accountId, $pathType);
+    $pathType = str_ireplace("{id2}", $accountId2, $pathType);
+    $pathType = str_ireplace("{accountId2}", $accountId2, $pathType);
+    $pathType = str_ireplace("{vin}", $MY_VIN, $pathType);
+    $pathType = str_ireplace("{personId}", $personId, $pathType);
+
+
+    $fullUrl = $kamereonurl .
+                $pathType .
+                $endp .
+                $QUESTION_MARK . "country=" . $country . "&" . $optionalParameters;
+
+
+    // Log di debug
+    echo "DEBUG:<br>";
+    echo "id_token: " . $id_token . "<br>";
+    echo "path: " . $path . "<br>";
+    echo "data: " . $data . "<br>";
+    echo "version: " . $version . "<br>";
+    echo "sourceField: " . $sourceField . "<br>";
+    echo "destField: " . $destField . "<br>";
+    echo "==================== POST URL: " . $fullUrl . "<br>";
+
+    // Inizializza cURL
+    $ch = curl_init($fullUrl);
+
+    // Imposta le opzioni di cURL
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/vnd.api+json',
+        'x-gigya-id_token: ' . $id_token,
+        'apikey: ' . $KAMEREON_KEY
+    ]);
+
+
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+
+    // Esegui la richiesta cURL e cattura la risposta
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+echo "<br>Return code: '" . $httpCode . "'<br>";
+echo "<br>Raw response: '" . $response . "'<br>";
+    // Chiudi la sessione cURL
+    curl_close($ch);
+
+    // Gestione della risposta
+    if ($httpCode >= 200 && $httpCode < 300) {
+        echo "POST result successful.\n";
+        $responseData = json_decode($response, true);
+
+        // Log e gestione della notifica
+        if (isset($responseData['id'])) {
+            $notificationId = $responseData['id'];
+        } elseif (isset($responseData['data']['id'])) {
+            $notificationId = $responseData['data']['id'];
+        } else {
+            $notificationId = "MISSING NOTIFICATION ID";
+            echo "NOTIFICATION ERROR! No ID for " . $path . "\n";
+        }
+
+        echo "kamereonPost: notification to manage: " . $notificationId . "\n";
+
+        // Puoi chiamare qui la funzione manageNotification, se definita
+// manageNotification("last", $fullUrl, $notificationId); // Da definire
+
+        // Se sourceField e destField sono definiti, aggiorna il valore
+        if (!empty($sourceField) && !empty($destField)) {
+            // Qui dovresti implementare la logica per risolvere il path e
+            // aggiornare il valore dell'elemento, ad esempio:
+            // $_POST[$destField] = resolvePath($responseData, $sourceField);
+        }
+
+        return ['status' => 'ok', 'data' => $responseData['id']];
+    } else {
+        // Gestione dell'errore
+        echo "Error occurred: HTTP Code " . $httpCode . "\n";
+        $wholeError = json_decode($response, true);
+
+        if (isset($wholeError['errors'][0])) {
+            $err = $wholeError['errors'][0];
+            $mess = $wholeError['messages'][0];
+            $errorMessage = $err['errorMessage'] . "," . $mess['propertyPath'] . " " . $mess['message'];
+            echo "Error message: " . $errorMessage . "\n";
+        } else {
+            echo "???? Unexpected error structure: " . $response . "\n";
+        }
+    }
+}
+
+
+
+
+
 
 
 
